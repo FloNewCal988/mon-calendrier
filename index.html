@@ -926,6 +926,51 @@ table.acct tr[data-month]{cursor:pointer}
 .hm{display:block;font-size:.8em;font-weight:500;color:var(--muted);text-align:right;line-height:1.2}
 .srow .v .hm{margin-top:1px}
 .kpi-m .hm{display:inline;margin-left:6px;font-size:.92em}
+
+/* statistiques */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+@media (min-width:640px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:1000px){.tiles{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.tile{background:var(--surface);border-radius:16px;padding:12px 14px;box-shadow:var(--lift);min-width:0}
+.tile span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile b{display:block;font:800 24px/1.15 var(--display);letter-spacing:-.02em;margin:3px 0 1px;white-space:nowrap}
+.tile b.pos{color:var(--pos)} .tile b.neg{color:var(--neg)}
+.tile small{font-size:12px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (min-width:1000px){.slay{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 16px;align-items:start}}
+.cbox{position:relative;touch-action:pan-y}
+.cbox svg{display:block;overflow:visible}
+.cbox .grid{stroke:var(--rule);stroke-width:1}
+.cbox .grid.zero{stroke:var(--muted);opacity:.6}
+.cbox .ax{font-size:11px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.cbox .axl{font-size:13px;fill:var(--ink)}
+.cbox .vl{font-size:12.5px;fill:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.cbox .ln{fill:none;stroke:var(--k-R);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.cbox .ln.fut{stroke-dasharray:4 4;opacity:.75}
+.cbox .dotn{fill:var(--k-R);stroke:var(--surface);stroke-width:2}
+.cbox .xh{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.cbox .xd{fill:var(--k-R);stroke:var(--surface);stroke-width:2}
+.cbox .bp{fill:var(--pos)} .cbox .bm{fill:var(--neg)} .cbox .bw{fill:var(--accent)}
+.ctip{position:absolute;z-index:3;pointer-events:none;background:var(--ink);color:var(--paper);border-radius:10px;padding:7px 10px;font-size:12.5px;line-height:1.4;white-space:nowrap;box-shadow:0 8px 20px -8px rgba(0,0,0,.4)}
+.ctip span{opacity:.75} .ctip .pos{color:#5BE3A8;opacity:1} .ctip .neg{color:#FF9A8A;opacity:1}
+.lgd{display:flex;gap:14px;font-size:13px;color:var(--muted);margin:-2px 0 8px}
+.lgd span{display:inline-flex;align-items:center;gap:6px}
+.lgd i{width:10px;height:10px;border-radius:3px}
+.lgd .bpi{background:var(--pos)} .lgd .bmi{background:var(--neg)}
+.segbar{display:flex;gap:2px;height:22px;border-radius:7px;overflow:hidden;margin:4px 0 12px}
+.segbar span{display:block;min-width:3px;background:color-mix(in srgb,var(--kc) 70%,var(--surface))}
+.segbar span.k-W{background:color-mix(in srgb,var(--k-W) 45%,var(--surface))}
+.segbar span.k-T{background:transparent;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--k-W) 55%,transparent)}
+.segbar span.k-P{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--k-P) 70%,var(--surface)) 0 3px,transparent 3px 6px)}
+.seglg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px}
+.seglg div{display:flex;align-items:center;gap:7px;font-size:13.5px;min-width:0}
+.seglg i{flex:none;width:10px;height:10px;border-radius:3px;background:color-mix(in srgb,var(--kc) 70%,var(--surface))}
+.seglg i.k-W{background:color-mix(in srgb,var(--k-W) 45%,var(--surface))}
+.seglg i.k-T{background:transparent;box-shadow:inset 0 0 0 1.5px var(--k-W)}
+.seglg span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.seglg b{font-weight:700}
+.seglg small{color:var(--muted);width:34px;text-align:right}
+table.acct tr[data-sety2]{cursor:pointer}
+@media (max-width:480px){.seglg{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -991,6 +1036,7 @@ table.acct tr[data-month]{cursor:pointer}
     <section id="tab-month"><div id="monthBody"></div></section>
     <section id="tab-year" class="hidden"><div id="yearBody"></div></section>
     <section id="tab-recup" class="hidden"><div id="recupBody"></div></section>
+    <section id="tab-stats" class="hidden"><div id="statsBody"></div></section>
     <section id="tab-log" class="hidden"><div id="logBody"></div></section>
     <section id="tab-settings" class="hidden"><div id="settingsBody"></div></section>
   </main>
@@ -1001,6 +1047,7 @@ table.acct tr[data-month]{cursor:pointer}
     <button data-tab="month" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M7.5 13h2M11 13h2M14.5 13h2M7.5 17h2M11 17h2"/></svg>Mois</button>
     <button data-tab="year"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Année</button>
     <button data-tab="recup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>Récup</button>
+    <button data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Stats</button>
     <button data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4.5h4.5"/><path d="M12 8v4.5l3 2"/></svg>Historique</button>
   </div></nav>
 </div>
@@ -1451,14 +1498,14 @@ function setTab(t){
   ui.tab=t; saveUI();
   document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab===t));
   $("gearBtn").classList.toggle("on", t==="settings");
-  for(const k of ["month","year","recup","log","settings"]) $("tab-"+k).classList.toggle("hidden", k!==t);
+  for(const k of ["month","year","recup","stats","log","settings"]) $("tab-"+k).classList.toggle("hidden", k!==t);
   render(); scrollTo(0,0);
 }
 function renderHeader(){
   const t=ui.tab, period = t!=="settings" && t!=="log";
   $("prevP").classList.toggle("hidden", !period); $("nextP").classList.toggle("hidden", !period);
-  $("periodLbl").textContent = t==="month" ? capF(mLabel(ui.month)) : t==="year" ? String(ui.year) : t==="recup" ? "Récup "+ui.year : TITLES[t];
-  $("fab").classList.toggle("hidden", t==="settings" || t==="log");
+  $("periodLbl").textContent = t==="month" ? capF(mLabel(ui.month)) : t==="year" ? String(ui.year) : t==="recup" ? "Récup "+ui.year : t==="stats" ? "Stats "+ui.year : TITLES[t];
+  $("fab").classList.toggle("hidden", t==="settings" || t==="log" || t==="stats");
   $("fabTxt").textContent = t==="recup" ? "Saisir des heures" : "Poser des jours";
 }
 function render(){
@@ -1469,11 +1516,12 @@ function render(){
   else if(t==="year") renderYear();
   else if(t==="recup") renderRecup();
   else if(t==="log") renderLog();
+  else if(t==="stats") renderStats();
   else if(t==="settings") renderSettings();
 }
 function shiftPeriod(d){
   if(ui.tab==="month"){ ui.month=mShift(ui.month,d); ui.year=Number(ui.month.slice(0,4)); }
-  else if(ui.tab==="year" || ui.tab==="recup"){ ui.year+=d; ui.month=ui.year+ui.month.slice(4); }
+  else if(ui.tab==="year" || ui.tab==="recup" || ui.tab==="stats"){ ui.year+=d; ui.month=ui.year+ui.month.slice(4); }
   render();
 }
 function goToday(){ const t=new Date(); ui.month=calMonth(t); ui.year=t.getFullYear(); render(); }
@@ -1826,6 +1874,7 @@ function openGuide(){
     ["Nouvelle année", `<p>Réglages → <b>Mes droits</b> → « Préparer ${new Date().getFullYear()+1} » : l'app propose de reprendre le restant de l'année en cours.</p>`],
     ["Ponts", `<p>Réglages → <b>Ponts</b> : ajoute les ponts accordés chaque année (l'app propose ceux qui collent à un férié du mardi ou du jeudi). Ils s'appliquent tout seuls dans le calendrier, comme les fériés.</p>`],
     ["Impôts", `<p>Onglet <b>Année</b> → « Pour les impôts » : le nombre de jours travaillés de l'année, où les <b>jours de récup comptent comme travaillés</b> (journée R, ou journée travaillée avec des heures de récup prises). Les congés, fériés, ponts et week-ends n'y sont pas. Détail mois par mois disponible.</p>`],
+    ["Stats", `<p>L'onglet <b>Stats</b> résume l'année : chiffres clés, courbe du solde de récup, heures en plus et prises par mois, répartition des jours, heures en plus selon le jour de la semaine, et comparaison des années. Touche ou survole un graphique pour voir le détail.</p>`],
     ["Historique", `<p>Chaque modification est notée dans l'onglet <b>Historique</b> : date, heure, appareil (iPhone ou ordinateur) et ce qui a changé (avant → après). Le bouton <b>Annuler</b> remet l'état d'avant ; l'annulation est elle-même notée.</p>`],
     ["Changer de mois", `<p>Flèches ‹ › ou glisse le doigt à gauche / à droite. Touche le titre pour revenir à aujourd'hui.</p>`],
   ];
@@ -1886,6 +1935,130 @@ function addPont(d, name){
   logBegin(); setPref("ponts", [...ponts(), {d, name}].sort((a,b)=>a.d<b.d?-1:1));
   logCommit("pref", `Pont ajouté : ${capF(fmtShort(dt))} ${dt.getFullYear()}${name&&name!=="Pont"?" ("+name+")":""}`);
   touch(); render(); toast(`Pont ajouté : ${fmtShort(dt)}`);
+}
+
+
+/* ================= STATISTIQUES ================= */
+/* Toutes les valeurs viennent de stats() et des jours : rien n'est stocké en plus. */
+function dayRows(y){
+  const out=[], today=todayIso(); let bal=stats(y).P.recup;
+  for(let d=new Date(y,0,1); d.getFullYear()===y; d=addDays(d,1)){
+    const iso=isoDate(d), c=codeOf(iso,d), h=hoursOf(iso,c); bal=r2(bal+h);
+    out.push({d, iso, c, h, bal, past: iso<=today});
+  }
+  return out;
+}
+const svgEl = (w,h,inner,label) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}">${inner}</svg>`;
+function niceTicks(min, max, n){
+  const span=max-min||1, step0=span/n, mag=Math.pow(10,Math.floor(Math.log10(step0))), f=step0/mag;
+  const step=(f<1.5?1:f<3?2:f<7?5:10)*mag, lo=Math.floor(min/step)*step, hi=Math.ceil(max/step)*step, t=[];
+  for(let v=lo; v<=hi+step/2; v+=step) t.push(r2(v)); return t;
+}
+function chartW(){ const b=$("statsBody"), w=b.clientWidth||360; return Math.max(260, Math.floor((isDesk() ? (w-16)/2 : w) - 34)); }
+
+/* solde de récup jour par jour */
+function balanceChart(y, rows, W){
+  const H=200, L=44, Rr=10, T=12, B=26, iw=W-L-Rr, ih=H-T-B;
+  const vals=rows.map(r=>r.bal), tk=niceTicks(Math.min(...vals,0>Math.min(...vals)?Math.min(...vals):Math.min(...vals)), Math.max(...vals), 4);
+  const lo=tk[0], hi=tk[tk.length-1], X=i=>L+i*iw/(rows.length-1), Yv=v=>T+ih-(v-lo)/(hi-lo||1)*ih;
+  let g=tk.map(v=>`<line x1="${L}" x2="${W-Rr}" y1="${Yv(v)}" y2="${Yv(v)}" class="grid"/><text x="${L-6}" y="${Yv(v)+4}" class="ax" text-anchor="end">${fmtN(v,NF1)}</text>`).join("");
+  for(let m=0;m<12;m++){ const i=rows.findIndex(r=>r.d.getMonth()===m); g+=`<text x="${X(i)+2}" y="${H-8}" class="ax">${"JFMAMJJASOND"[m]}</text>`; }
+  const past=rows.filter(r=>r.past), nP=past.length;
+  const path=(arr,off)=>arr.map((r,i)=>(i?"L":"M")+X(i+off).toFixed(1)+" "+Yv(r.bal).toFixed(1)).join("");
+  if(nP>1) g+=`<path d="${path(past,0)}" class="ln"/>`;
+  if(nP<rows.length) g+=`<path d="${path(rows.slice(Math.max(0,nP-1)),Math.max(0,nP-1))}" class="ln fut"/>`;
+  if(nP && nP<rows.length){ const r=past[nP-1]; g+=`<circle cx="${X(nP-1)}" cy="${Yv(r.bal)}" r="4.5" class="dotn"/>`; }
+  g+=`<line class="xh" x1="0" x2="0" y1="${T}" y2="${T+ih}" style="display:none"/><circle class="xd" r="4.5" style="display:none"/>`;
+  g+=`<rect x="${L}" y="0" width="${iw}" height="${H}" fill="transparent" data-hit="bal"/>`;
+  return {svg:svgEl(W,H,g,`Solde de récup jour par jour en ${y}`), geo:{L,iw,X,Yv,n:rows.length}};
+}
+/* heures en plus / récup prise par mois (barres de part et d'autre de zéro) */
+function monthBars(st, W){
+  const H=200, L=44, Rr=8, T=12, B=26, iw=W-L-Rr, ih=H-T-B;
+  const mx=Math.max(1,...st.mon.map(m=>m.plus)), mn=Math.min(-1,...st.mon.map(m=>m.minus));
+  const tk=niceTicks(mn,mx,4), lo=tk[0], hi=tk[tk.length-1], Yv=v=>T+ih-(v-lo)/(hi-lo)*ih;
+  const cw=iw/12, bw=Math.max(6,Math.min(22,cw-8));
+  let g=tk.map(v=>`<line x1="${L}" x2="${W-Rr}" y1="${Yv(v)}" y2="${Yv(v)}" class="grid${v===0?" zero":""}"/><text x="${L-6}" y="${Yv(v)+4}" class="ax" text-anchor="end">${v>0?"+":""}${fmtN(v,NF1)}</text>`).join("");
+  st.mon.forEach((m,i)=>{ const x=L+i*cw+(cw-bw)/2, y0=Yv(0);
+    if(m.plus>0){ const y1=Yv(m.plus); g+=`<path d="${barPath(x,y1,bw,y0-y1,true)}" class="bp"/>`; }
+    if(m.minus<0){ const y1=Yv(m.minus); g+=`<path d="${barPath(x,y0,bw,y1-y0,false)}" class="bm"/>`; }
+    g+=`<text x="${x+bw/2}" y="${H-8}" class="ax" text-anchor="middle">${"JFMAMJJASOND"[i]}</text>`;
+    g+=`<rect x="${L+i*cw}" y="0" width="${cw}" height="${H}" fill="transparent" data-hit="m" data-i="${i}"/>`; });
+  return svgEl(W,H,g,"Heures en plus et récup prise par mois");
+}
+/* barre arrondie (4px) du côté opposé à la ligne de base */
+function barPath(x,y,w,h,up){ const r=Math.min(4,w/2,Math.abs(h)); if(h<=0) return "";
+  return up ? `M${x} ${y+h}V${y+r}Q${x} ${y} ${x+r} ${y}H${x+w-r}Q${x+w} ${y} ${x+w} ${y+r}V${y+h}Z`
+            : `M${x} ${y}V${y+h-r}Q${x} ${y+h} ${x+r} ${y+h}H${x+w-r}Q${x+w} ${y+h} ${x+w} ${y+h-r}V${y}Z`; }
+/* heures en plus en moyenne selon le jour de la semaine (jours travaillés passés) */
+function weekdayBars(rows, W){
+  const D=[1,2,3,4,5], agg=Object.fromEntries(D.map(d=>[d,{n:0,plus:0,days:0}]));
+  for(const r of rows){ if(!r.past || !agg[r.d.getDay()] || !["#","O"].includes(r.c)) continue; const a=agg[r.d.getDay()]; a.n++; if(r.h>0){ a.plus+=r.h; a.days++; } }
+  const avg=D.map(d=>agg[d].n ? agg[d].plus/agg[d].n : 0), mx=Math.max(0.5,...avg);
+  const rowH=30, H=D.length*rowH+4, L=70, Rr=64, iw=W-L-Rr;
+  let g=""; D.forEach((d,i)=>{ const y=i*rowH+6, w=Math.max(avg[i]>0?3:0, avg[i]/mx*iw);
+    g+=`<text x="0" y="${y+14}" class="axl">${capF(JOURS[d])}</text>`;
+    if(w) g+=`<path d="M${L} ${y}H${L+w-4}Q${L+w} ${y} ${L+w} ${y+4}V${y+14}Q${L+w} ${y+18} ${L+w-4} ${y+18}H${L}Z" class="bw"/>`;
+    g+=`<text x="${L+w+6}" y="${y+14}" class="vl">${avg[i]?fmtHM(avg[i]):"—"}</text>`;
+    g+=`<rect x="0" y="${y-4}" width="${W}" height="${rowH}" fill="transparent" data-hit="wd" data-i="${i}" data-n="${agg[d].n}" data-k="${agg[d].days}" data-v="${r2(agg[d].plus)}"/>`; });
+  return svgEl(W,H,g,"Heures en plus en moyenne par jour de la semaine");
+}
+function renderStats(){
+  const y=ui.year, st=stats(y), rows=dayRows(y), hd=hday(), W=chartW();
+  const worked=rows.filter(r=>r.past && ["#","O","R"].includes(r.c));
+  const hoursWorked=r2(worked.reduce((a,r)=>a+Math.max(0,hd+r.h),0));
+  const wd=rows.filter(r=>r.past && ["#","O"].includes(r.c)), avgDay=wd.length ? wd.reduce((a,r)=>a+Math.max(0,hd+r.h),0)/wd.length : 0;
+  const longest=wd.reduce((b,r)=>!b || r.h>b.h ? r : b, null);
+  const tiles=[
+    ["Heures en plus", fmtHM(st.plus,true), `${fmtN(st.plus,NF2)} h`, "pos"],
+    ["Récup prise", fmtHM(st.minus), `${fmtN(st.minus,NF2)} h`, "neg"],
+    ["Jours travaillés", st.imp+" j", `dont ${st.impRec} de récup`, ""],
+    ["Heures travaillées", fmtHM(hoursWorked), `à ce jour en ${y}`, ""],
+    ["Journée moyenne", wd.length?fmtHM(avgDay):"—", `pour ${fmtHM(hd)} prévues`, ""],
+    ["Plus longue journée", longest && longest.h>0 ? fmtHM(hd+longest.h) : "—", longest && longest.h>0 ? fmtShort(longest.d) : "", ""],
+  ];
+  // répartition des jours ouvrés
+  const parts=[["#","Travaillés",st.cnt["#"]-st.cnt.T>=0?st.cnt["#"]:0],["T","À travailler",st.cnt.T],["O","Formation",st.cnt.O],["C","Congés posés",st.cnt.C],["P","Congés prévus",st.cnt.P],["E","Congés except.",st.cnt.E],["R","Récup",st.cnt.R],["G","Ponts",st.cnt.G],["F","Fériés",st.cnt.F]].filter(p=>p[2]>0);
+  const tot=parts.reduce((a,p)=>a+p[2],0)||1;
+  const seg=`<div class="segbar">${parts.map(p=>`<span class="k-${CODE[p[0]].css}" style="flex:${p[2]}" title="${esc(p[1])} : ${p[2]} j"></span>`).join("")}</div>
+    <div class="seglg">${parts.map(p=>`<div><i class="k-${CODE[p[0]].css}"></i><span>${esc(p[1])}</span><b class="num">${p[2]} j</b><small>${Math.round(p[2]/tot*100)} %</small></div>`).join("")}</div>`;
+  // comparaison des années
+  const ys=yearsList().filter(x=>hasYearData(x)).sort((a,b)=>a-b);
+  const cmp=`<table class="acct"><thead><tr><th>Année</th><th>Travaillés</th><th>Congés</th><th>En plus</th><th>Prise</th><th>Solde fin</th></tr></thead><tbody>${ys.map(x=>{ const s2=stats(x);
+    return `<tr class="${x===y?"cur":""}" data-sety2="${x}"><td>${x}</td><td class="num">${s2.impProj}</td><td class="num">${s2.cnt.C+s2.cnt.P}</td><td class="num p">+${fmtN(s2.plus,NF1)}</td><td class="num m">${fmtN(s2.minus,NF1)}</td><td class="num">${fmtN(s2.recRest,NF1)}</td></tr>`; }).join("")}</tbody></table>
+    <div class="hint">Jours travaillés : année entière (prévision pour l'année en cours), récup comprise. Heures en plus, prise et solde : en heures.</div>`;
+  const bal=balanceChart(y, rows, W);
+  $("statsBody").innerHTML = `
+    <div class="tiles">${tiles.map(t=>`<div class="tile"><span>${t[0]}</span><b class="num ${t[3]}">${t[1]}</b><small>${esc(t[2])}</small></div>`).join("")}</div>
+    <div class="slay">
+      <div class="panel chartw" data-chart="bal"><h3>Solde de récup jour par jour</h3><div class="hint" style="margin-top:0">De ${fmtH(st.P.recup)} au 1er janvier à ${fmtH(st.recRest)} fin ${y}${rows.some(r=>!r.past)?" · pointillés : à venir":""}</div><div class="cbox">${bal.svg}<div class="ctip" hidden></div></div></div>
+      <div class="panel chartw" data-chart="m"><h3>Heures en plus et récup prise</h3><div class="lgd"><span><i class="bpi"></i>En plus</span><span><i class="bmi"></i>Prise</span></div><div class="cbox">${monthBars(st, W)}<div class="ctip" hidden></div></div></div>
+      <div class="panel"><h3>Répartition des jours ouvrés</h3>${seg}</div>
+      <div class="panel chartw" data-chart="wd"><h3>Heures en plus selon le jour</h3><div class="hint" style="margin-top:0">Moyenne par jour travaillé, ${y} à ce jour</div><div class="cbox">${weekdayBars(rows, W)}<div class="ctip" hidden></div></div></div>
+      <div class="panel" style="grid-column:1/-1"><h3>Comparaison des années</h3>${cmp}</div>
+    </div>`;
+  bindCharts(st, rows, bal.geo);
+}
+function bindCharts(st, rows, geo){
+  const tipAt=(box, html, x, y)=>{ const t=box.querySelector(".ctip"); t.innerHTML=html; t.hidden=false;
+    const bw=box.clientWidth, tw=t.offsetWidth; t.style.left=Math.max(0,Math.min(bw-tw, x-tw/2))+"px"; t.style.top=Math.max(0,y-t.offsetHeight-10)+"px"; };
+  const hide=box=>{ const t=box.querySelector(".ctip"); if(t) t.hidden=true; const xh=box.querySelector(".xh"), xd=box.querySelector(".xd"); if(xh){ xh.style.display="none"; xd.style.display="none"; } };
+  document.querySelectorAll("#statsBody .cbox").forEach(box=>{
+    const svg=box.querySelector("svg");
+    const move=e=>{ const r=svg.getBoundingClientRect(), x=e.clientX-r.left, yy=e.clientY-r.top, hit=document.elementFromPoint(e.clientX,e.clientY);
+      const k=box.parentNode.dataset.chart;
+      if(k==="bal"){ if(x<geo.L || x>geo.L+geo.iw) return hide(box); const i=Math.max(0,Math.min(geo.n-1,Math.round((x-geo.L)/geo.iw*(geo.n-1)))), rr=rows[i];
+        const px=geo.X(i), py=geo.Yv(rr.bal), xh=box.querySelector(".xh"), xd=box.querySelector(".xd");
+        xh.setAttribute("x1",px); xh.setAttribute("x2",px); xh.style.display=""; xd.setAttribute("cx",px); xd.setAttribute("cy",py); xd.style.display="";
+        return tipAt(box, `<b>${capF(fmtShort(rr.d))}</b><br>${fmtH(rr.bal)} <span>· ${fmtHM(rr.bal)}</span>${rr.h?`<br><span>ce jour : ${fmtHM(rr.h,true)}</span>`:""}${rr.past?"":"<br><span>à venir</span>"}`, px, py); }
+      if(!hit || !hit.dataset || !hit.dataset.hit) return hide(box);
+      if(k==="m"){ const i=Number(hit.dataset.i), m=st.mon[i];
+        return tipAt(box, `<b>${capF(MOIS[i])}</b><br><span class="pos">${fmtHM(m.plus,true)}</span> · <span class="neg">${fmtHM(m.minus)}</span><br>bilan ${fmtHM(m.net,true)}`, x, Math.min(yy, 60)+40); }
+      if(k==="wd"){ const d=hit.dataset; return tipAt(box, `<b>${capF(JOURS[[1,2,3,4,5][Number(d.i)]])}</b><br>${fmtHM(Number(d.v),true)} sur ${d.n} jours<br><span>${d.k} avec heures en plus</span>`, x, yy); }
+    };
+    svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move);
+    svg.addEventListener("pointerleave", e=>{ if(e.pointerType==="mouse") hide(box); });
+  });
 }
 
 /* ================= HISTORIQUE ================= */
@@ -2133,6 +2306,8 @@ document.addEventListener("click", e=>{
   if(el=t.closest("[data-gomonth]")){ ui.month=el.dataset.gomonth; ui.year=Number(ui.month.slice(0,4)); return setTab("month"); }
   if(el=t.closest("[data-yearedit]")) return openYear(Number(el.dataset.yearedit));
   if(el=t.closest("[data-gotab]")) return setTab(el.dataset.gotab);
+  if(el=t.closest("[data-sety2]")){ ui.year=Number(el.dataset.sety2); ui.month=ui.year+ui.month.slice(4); render(); return; }
+  if(!t.closest(".cbox")) document.querySelectorAll("#statsBody .ctip").forEach(x=>x.hidden=true);
   if(el=t.closest("[data-sety]")){ ui.year+=Number(el.dataset.sety); ui.month=ui.year+ui.month.slice(4); render(); return; }
   if(el=t.closest("[data-pontadd]")){ const [d,n]=el.dataset.pontadd.split("|"); return addPont(d, n); }
   if(el=t.closest("[data-pontdel]")){ const d=el.dataset.pontdel, x=ponts().find(p=>p.d===d); logBegin(); setPref("ponts", ponts().filter(p=>p.d!==d));
@@ -2147,12 +2322,13 @@ document.addEventListener("click", e=>{
 (()=>{ let sx=0, sy=0, st=0, skip=false;  // (pas de balayage sur Historique et Réglages)
   document.querySelector("main").addEventListener("touchstart", e=>{ const p=e.touches[0]; sx=p.clientX; sy=p.clientY; st=Date.now(); skip=!!e.target.closest(".chips, table"); }, {passive:true});
   document.querySelector("main").addEventListener("touchend", e=>{
-    if(skip || ui.tab==="settings" || ui.tab==="log" || $("modalRoot").firstElementChild) return;
+    if(skip || e.target.closest(".chartw") || ui.tab==="settings" || ui.tab==="log" || $("modalRoot").firstElementChild) return;
     const p=e.changedTouches[0], dx=p.clientX-sx, dy=p.clientY-sy;
     if(Date.now()-st<600 && Math.abs(dx)>70 && Math.abs(dy)<45) shiftPeriod(dx<0?1:-1);
   }, {passive:true});
 })();
 matchMedia("(min-width:1000px)").addEventListener("change", ()=>{ if(S.data) render(); });
+{ let rt=null; addEventListener("resize", ()=>{ if(ui.tab!=="stats" || !S.data) return; clearTimeout(rt); rt=setTimeout(render, 200); }); }
 addEventListener("online", ()=>{ if(S.pw) sync(); });
 
 if("serviceWorker" in navigator && location.protocol==="https:"){
