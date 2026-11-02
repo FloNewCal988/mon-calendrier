@@ -898,6 +898,25 @@ table.acct tr[data-month]{cursor:pointer}
   .rlay .jrn .jm:first-child{margin-top:0}
   .hero2{gap:16px}
 }
+
+/* historique */
+.logf{margin-bottom:4px}
+.lg{padding:11px 14px;position:relative}
+.lg + .lg::before{content:"";position:absolute;top:0;left:14px;right:0;border-top:1px solid var(--rule)}
+.lg-h{display:flex;gap:12px;align-items:flex-start}
+.lg-t{flex:none;width:42px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;padding-top:1px}
+.lg .main{flex:1;min-width:0}
+.lg .lab{font-weight:600}
+.lg .meta{font-size:12.5px;color:var(--muted)}
+.lg-d{margin:6px 0 0 54px;font-size:13.5px;color:var(--muted)}
+.lg-d summary{cursor:pointer;color:var(--link);font-weight:500}
+.lg-l{padding:3px 0;line-height:1.4}
+.lg-l[data-day]{cursor:pointer}
+.lg-l span{color:var(--ink);font-weight:500}
+.lg-l b{color:var(--ink)}
+.lg.undone .lab{text-decoration:line-through;color:var(--muted)}
+.ysw{display:flex;gap:2px;flex:none}
+.setsec .seth{align-items:flex-start}
 </style>
 </head>
 <body>
@@ -963,6 +982,7 @@ table.acct tr[data-month]{cursor:pointer}
     <section id="tab-month"><div id="monthBody"></div></section>
     <section id="tab-year" class="hidden"><div id="yearBody"></div></section>
     <section id="tab-recup" class="hidden"><div id="recupBody"></div></section>
+    <section id="tab-log" class="hidden"><div id="logBody"></div></section>
     <section id="tab-settings" class="hidden"><div id="settingsBody"></div></section>
   </main>
 
@@ -972,6 +992,7 @@ table.acct tr[data-month]{cursor:pointer}
     <button data-tab="month" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M7.5 13h2M11 13h2M14.5 13h2M7.5 17h2M11 17h2"/></svg>Mois</button>
     <button data-tab="year"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Année</button>
     <button data-tab="recup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>Récup</button>
+    <button data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4.5h4.5"/><path d="M12 8v4.5l3 2"/></svg>Historique</button>
   </div></nav>
 </div>
 <div id="modalRoot"></div>
@@ -1057,7 +1078,7 @@ async function ghPutFile(c, token, path, text, sha, message){
            code : motif choisi (null = automatique), h : heures signées (+2.5 en plus, −7.8 de récup), note
    years : droits de l'année, id = "2026" : cpN1 (reliquat), cpN (droits de l'année), recup (heures reportées au 1er janvier)
    prefs : réglages (heures par jour, jours travaillés, jours fériés désactivés) */
-const KEYS = ["days","years","prefs"];
+const KEYS = ["days","years","prefs","log"];   // log : historique des modifications
 const CODES = [
   {k:"C", css:"C", name:"Congé posé",    short:"Congé"},
   {k:"P", css:"P", name:"Congé prévu",   short:"Prévu"},
@@ -1095,14 +1116,14 @@ function seedDefaults(){
   return n;
 }
 const pref = (id, def) => { const p=S.data && S.data.prefs.find(x=>x.id===id && !x.deleted); return p ? p.value : def; };
-function setPref(id, value){ const p=S.data.prefs.find(x=>x.id===id); if(p){ p.value=value; p.deleted=false; p.updatedAt=Date.now(); } else S.data.prefs.push({id, value, updatedAt:Date.now()}); }
+function setPref(id, value){ logNote("prefs", id, ()=>{ const q=S.data.prefs.find(x=>x.id===id && !x.deleted); return q ? q.value : null; }); const p=S.data.prefs.find(x=>x.id===id); if(p){ p.value=value; p.deleted=false; p.updatedAt=Date.now(); } else S.data.prefs.push({id, value, updatedAt:Date.now()}); }
 const hday = () => Number(pref("hday", DEFAULT_HDAY)) || DEFAULT_HDAY;
 const workDays = () => { const v=pref("workdays"); return Array.isArray(v) && v.length ? v : [1,2,3,4,5]; };
 const holOff = () => { const v=pref("holoff"); return Array.isArray(v) ? v : []; };
 
 /* index des jours + calculs mis en cache jusqu'à la prochaine modification */
 let DM=null, STC=new Map();
-function invalidate(){ DM=null; STC=new Map(); }
+function invalidate(){ DM=null; STC=new Map(); PONTC=null; }
 const dmap = () => { if(!DM){ DM=new Map(); for(const r of S.data.days) if(!r.deleted) DM.set(r.id, r); } return DM; };
 
 /* ================= DATES ================= */
@@ -1132,6 +1153,18 @@ function holidayList(y){ const e=easter(y);
     ["citoyennete","Fête de la citoyenneté",new Date(y,8,24)],["toussaint","Toussaint",new Date(y,10,1)],["armistice","Armistice 1918",new Date(y,10,11)],["noel","Noël",new Date(y,11,25)]]
     .map(([k,name,date])=>({k,name,date})); }
 const HOLC = new Map();
+/* ponts : choisis année par année (Réglages → Ponts), appliqués automatiquement comme les fériés */
+const ponts = () => { const v=pref("ponts"); return Array.isArray(v) ? v : []; };
+let PONTC=null;
+const pontMap = () => { if(!PONTC){ PONTC=new Map(ponts().map(x=>[x.d, x.name||"Pont"])); } return PONTC; };
+/* ponts possibles : lundi avant un férié du mardi, vendredi après un férié du jeudi */
+function pontSuggestions(y){
+  const out=[], have=pontMap(), H=holidays(y);
+  for(const h of holidayList(y)){ if(!H.has(isoDate(h.date))) continue; const wd=h.date.getDay();
+    const c = wd===2 ? addDays(h.date,-1) : wd===4 ? addDays(h.date,1) : null;
+    if(c && workDays().includes(c.getDay()) && !H.has(isoDate(c)) && !have.has(isoDate(c))) out.push({d:isoDate(c), name:"Pont "+h.name}); }
+  return out;
+}
 function holidays(y){ const key=y+"|"+holOff().join(","); if(!HOLC.has(key)){ const off=holOff(); HOLC.set(key, new Map(holidayList(y).filter(h=>!off.includes(h.k)).map(h=>[isoDate(h.date), h.name]))); } return HOLC.get(key); }
 
 /* ================= MOTIF D'UN JOUR ================= */
@@ -1140,11 +1173,13 @@ function autoCode(d, iso){
   iso = iso || isoDate(d);
   if(!workDays().includes(d.getDay())) return "";
   if(holidays(d.getFullYear()).has(iso)) return "F";
+  if(pontMap().has(iso)) return "G";
   return iso <= todayIso() ? "#" : "T";
 }
 function codeOf(iso, d){ const r=dmap().get(iso); if(r && r.code!=null && r.code in CODE) return r.code; return autoCode(d||parseIso(iso), iso); }
 function hoursOf(iso, code){ const r=dmap().get(iso); if(r && typeof r.h==="number") return r.h; return code==="R" ? -hday() : 0; }
 function setDay(iso, patch){
+  logNote("days", iso, ()=>daySnap(iso));
   let r=S.data.days.find(x=>x.id===iso);
   if(!r){ r={id:iso}; S.data.days.push(r); }
   Object.assign(r, patch, {deleted:false, updatedAt:Date.now()});
@@ -1385,7 +1420,7 @@ function pickBind(el, onChange){
 /* ================= INTERFACE ================= */
 const ui = Object.assign({tab:"month"}, ls.get(LS_UI)||{}); ui.month=null; ui.year=null;
 const saveUI = () => ls.set(LS_UI, {tab:ui.tab});
-const TITLES = {settings:"Réglages"};
+const TITLES = {settings:"Réglages", log:"Historique"};
 const isDesk = () => matchMedia("(min-width:1000px)").matches;
 
 function startApp(){
@@ -1398,14 +1433,14 @@ function setTab(t){
   ui.tab=t; saveUI();
   document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab===t));
   $("gearBtn").classList.toggle("on", t==="settings");
-  for(const k of ["month","year","recup","settings"]) $("tab-"+k).classList.toggle("hidden", k!==t);
+  for(const k of ["month","year","recup","log","settings"]) $("tab-"+k).classList.toggle("hidden", k!==t);
   render(); scrollTo(0,0);
 }
 function renderHeader(){
-  const t=ui.tab, period = t!=="settings";
+  const t=ui.tab, period = t!=="settings" && t!=="log";
   $("prevP").classList.toggle("hidden", !period); $("nextP").classList.toggle("hidden", !period);
   $("periodLbl").textContent = t==="month" ? capF(mLabel(ui.month)) : t==="year" ? String(ui.year) : t==="recup" ? "Récup "+ui.year : TITLES[t];
-  $("fab").classList.toggle("hidden", t==="settings");
+  $("fab").classList.toggle("hidden", t==="settings" || t==="log");
   $("fabTxt").textContent = t==="recup" ? "Saisir des heures" : "Poser des jours";
 }
 function render(){
@@ -1415,6 +1450,7 @@ function render(){
   if(t==="month") renderMonth();
   else if(t==="year") renderYear();
   else if(t==="recup") renderRecup();
+  else if(t==="log") renderLog();
   else if(t==="settings") renderSettings();
 }
 function shiftPeriod(d){
@@ -1557,12 +1593,12 @@ function openDay(iso, focusHours){
   const d=parseIso(iso), r=dmap().get(iso)||{}, auto=autoCode(d, iso), hd=hday();
   let code = r.code!=null && r.code in CODE ? r.code : null;
   const hol = holidays(d.getFullYear()).get(iso);
-  const autoName = auto==="" ? "Repos" : auto==="F" ? "Férié" : auto==="#" ? "Travaillé" : "À travailler";
+  const autoName = auto==="" ? "Repos" : auto==="F" ? "Férié" : auto==="G" ? "Pont" : auto==="#" ? "Travaillé" : "À travailler";
   const opts = [["auto", `Auto · ${autoName}`, CODE[auto].css], ...["C","P","R","G","F","#","-"].filter(k=>k!==auto || k==="F").filter(k=>!(k==="F" && auto==="F")).map(k=>[k, CODE[k].name, CODE[k].css])];
   const curV = code==null || code===auto ? "auto" : code;
   const hasH = typeof r.h==="number" && r.h!==0;
   const sign0 = hasH && r.h<0 ? "-" : (!hasH && (code==="R")) ? "-" : "+";
-  modal(`<h2>${esc(capF(fmtDay(d, true)))}</h2><div class="sub">Semaine ${isoWeek(d)}${hol?` · ${esc(hol)}`:""}</div>
+  modal(`<h2>${esc(capF(fmtDay(d, true)))}</h2><div class="sub">Semaine ${isoWeek(d)}${hol?` · ${esc(hol)}`:""}${pontMap().has(iso)?` · ${esc(pontMap().get(iso))}`:""}</div>
     <div class="sec"><div class="sh">Motif</div>
       <div class="motifs" id="dCode">${opts.map(([v,l,css])=>`<button class="mbtn${v===curV?" on":""}" data-v="${v}"><i class="k-${css}"></i>${esc(l)}</button>`).join("")}</div>
       <div class="hint" id="dCodeHint"></div></div>
@@ -1593,7 +1629,7 @@ function openDay(iso, focusHours){
     q("#dQuick").addEventListener("click", e=>{ const b=e.target.closest("[data-q]"); if(!b) return; q("#dDur").value=fmtHM(Number(b.dataset.q)); upd(); });
     q("#dDur").oninput=upd;
     q("#dCancel").onclick=close;
-    q("#dClear").onclick=()=>{ if(S.data.days.find(x=>x.id===iso)){ setDay(iso,{code:null, h:null, note:""}); touch(); } close(); };
+    q("#dClear").onclick=()=>{ if(S.data.days.find(x=>x.id===iso)){ logBegin(); setDay(iso,{code:null, h:null, note:""}); logCommit("day", capF(fmtShort(d))+" "+d.getFullYear()+" : effacé"); touch(); } close(); };
     q("#dOk").onclick=()=>{
       const c=getCode(), dur=parseDur(q("#dDur").value), s=getSign();
       if(dur!=null && (isNaN(dur) || dur<0 || dur>24)) return q("#dDur").focus();
@@ -1601,7 +1637,7 @@ function openDay(iso, focusHours){
       const note=q("#dNote").value.trim();
       const newCode = c==="auto" ? null : c;
       if(newCode==null && h==null && !note && !S.data.days.find(x=>x.id===iso)){ close(); return; }
-      setDay(iso, {code:newCode, h, note}); touch(); close();
+      logBegin(); setDay(iso, {code:newCode, h, note}); logCommit("day", capF(fmtShort(d))+" "+d.getFullYear()); touch(); close();
     };
     if(focusHours) setTimeout(()=>q("#dDur").focus(), 120);
   });
@@ -1646,7 +1682,9 @@ function openRange(from){
     q("#rTo").onchange=upd; upd();
     q("#rCancel").onclick=close;
     q("#rOk").onclick=()=>{ const D=days(), c=getCode(); if(!D.length) return;
-      for(const iso of D) setDay(iso, {code: c==="auto" ? null : c, h:null});
+      logBegin(); for(const iso of D) setDay(iso, {code: c==="auto" ? null : c, h:null});
+      const a0=parseIso(D[0]), b0=parseIso(D[D.length-1]);
+      logCommit("range", (D.length>1 ? `Du ${fmtShort(a0)} au ${fmtShort(b0)} ${b0.getFullYear()}` : capF(fmtShort(a0))+" "+a0.getFullYear())+" : "+(c==="auto"?"remis en automatique":CODE[c].name.toLowerCase()));
       touch(); close(); toast(c==="auto" ? `${D.length} jour${D.length>1?"s":""} remis en automatique` : `${D.length} jour${D.length>1?"s":""} : ${CODE[c].name.toLowerCase()}`); };
   });
 }
@@ -1670,8 +1708,7 @@ function openYear(y){
       const n1=parseNum(q("#yN1").value), n=parseNum(q("#yN").value);
       const recS=q("#yRec").value.trim(); const rec = /h|:/i.test(recS) ? parseDur(recS) : parseNum(recS);
       if([n1,n,rec].some(v=>v==null || isNaN(v))) return q("#yErr").textContent="Vérifie les trois valeurs.";
-      const id=String(y), rr=S.data.years.find(x=>x.id===id), v={cpN1:r2(n1), cpN:r2(n), recup:r2(rec), deleted:false, updatedAt:Date.now()};
-      if(rr) Object.assign(rr, v); else S.data.years.push({id, ...v});
+      logBegin(); setYear(y, {cpN1:r2(n1), cpN:r2(n), recup:r2(rec)}); logCommit("year", `Droits ${y}`);
       touch(); close(); toast(`Droits ${y} enregistrés`);
     };
   });
@@ -1681,7 +1718,7 @@ function openYear(y){
 function yearsList(){ const ys=new Set(live(S.data.years).map(x=>Number(x.id))); for(const r of S.data.days) if(!r.deleted) ys.add(Number(r.id.slice(0,4))); ys.add(new Date().getFullYear()); return [...ys].filter(Boolean).sort((a,b)=>b-a); }
 function renderSettings(){
   const cfg=S.cfg, ys=yearsList(), y=new Date().getFullYear(), off=holOff(), W=workDays();
-  const H=[...holidayList(ui.year)];
+  const H=[...holidayList(ui.year)], PL=ponts().filter(x=>x.d.startsWith(ui.year+"-")).sort((a,b)=>a.d<b.d?-1:1), SG=pontSuggestions(ui.year);
   $("settingsBody").innerHTML = `<div class="setwrap">
     <div class="card setop"><div class="st-l"><strong>Mon Calendrier</strong><div class="hint">Données : ${esc(cfg.owner)}/${esc(cfg.repo)}${S.lastSync?` · synchronisé à ${S.lastSync.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}`:""}</div></div>
       <div class="actions" style="margin-top:12px"><button class="btn" id="guideBtn">Mode d'emploi</button><button class="btn ghost" id="syncNow">Synchroniser maintenant</button></div></div>
@@ -1692,9 +1729,17 @@ function renderSettings(){
       <div class="card"><label for="hdIn" style="margin-top:0">Une journée de travail dure (heures)</label>
         <div style="display:flex;gap:8px;align-items:center"><input class="field" id="hdIn" inputmode="decimal" value="${fmtN(hday(),NF2)}" style="max-width:120px"><span class="hint" style="margin:0">soit ${fmtHM(hday())} — sert à convertir les heures en jours</span></div>
         <label>Mes jours de travail</label>
-        <div class="chips">${[1,2,3,4,5,6,0].map(d=>`<button class="chip${W.includes(d)?" on":""}" data-wd="${d}" aria-pressed="${W.includes(d)}" style="${W.includes(d)?"background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:600":""}">${capF(JOURS[d])}</button>`).join("")}</div>
+        <div class="chips">${[1,2,3,4,5,6,0].map(d=>`<button class="chip${W.includes(d)?" on":""}" data-wd="${d}" aria-pressed="${W.includes(d)}" style="${W.includes(d)?"background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:600;color:var(--ink)":""}">${capF(JOURS[d])}</button>`).join("")}</div>
         <div class="hint">Les autres jours sont des jours de repos.</div></div></section>
-    <section class="setsec"><div class="seth"><div><h2>Jours fériés ${ui.year}</h2><div class="hint" style="margin:0">Nouvelle-Calédonie — décoche un jour pour le compter comme travaillé</div></div></div>
+    <section class="setsec"><div class="seth"><div style="flex:1"><h2>Ponts ${ui.year}</h2><div class="hint" style="margin:0">Ils changent d'une année à l'autre : ajoute ceux accordés cette année</div></div>
+        <div class="ysw"><button class="arr" data-sety="-1" aria-label="Année précédente">‹</button><button class="arr" data-sety="1" aria-label="Année suivante">›</button></div></div>
+      <div class="card">${PL.length ? PL.map(x=>{ const d=parseIso(x.d); return `<div class="hol"><span>${esc(x.name||"Pont")} <small>· ${fmtShort(d)}</small></span><button class="btn ghost small danger" data-pontdel="${x.d}">Retirer</button></div>`; }).join("") : `<div class="hint" style="margin-top:0">Aucun pont en ${ui.year}.</div>`}
+        ${SG.length?`<label>Ponts possibles</label><div class="chips">${SG.map(x=>`<button class="chip" data-pontadd="${x.d}|${esc(x.name)}">＋ ${capF(fmtShort(parseIso(x.d)))} <small style="color:var(--muted)">${esc(x.name.replace(/^Pont /,""))}</small></button>`).join("")}</div>`:""}
+        <label>Ajouter un pont</label>
+        <div class="row2" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:center"><input class="field" type="date" id="pDate" min="${ui.year}-01-01" max="${ui.year}-12-31" value=""><input class="field" id="pName" placeholder="Nom (facultatif)"><button class="btn small" id="pAdd">Ajouter</button></div>
+        <div class="hint">Un pont s'affiche en jaune dans le calendrier et compte dans le compteur « Ponts », pas dans tes congés. Un jour déjà posé (congé, récup…) garde son motif.</div></div></section>
+    <section class="setsec"><div class="seth"><div style="flex:1"><h2>Jours fériés ${ui.year}</h2><div class="hint" style="margin:0">Nouvelle-Calédonie — décoche un jour pour le compter comme travaillé</div></div>
+        <div class="ysw"><button class="arr" data-sety="-1" aria-label="Année précédente">‹</button><button class="arr" data-sety="1" aria-label="Année suivante">›</button></div></div>
       <div class="card">${H.map(h=>`<label class="hol"><span>${esc(h.name)} <small>· ${fmtShort(h.date)}</small></span><input type="checkbox" data-hol="${h.k}"${off.includes(h.k)?"":" checked"}></label>`).join("")}
         <div class="hint">Tu peux aussi marquer un jour comme « Férié » à la main depuis le calendrier.</div></div></section>
     <section class="setsec"><div class="seth"><div><h2>Données et sécurité</h2><div class="hint" style="margin:0">Mot de passe, sauvegarde, import</div></div></div>
@@ -1720,7 +1765,8 @@ function renderSettings(){
   $("remToggle").onchange=async e=>{ if(e.target.checked) await rememberDevice(S.pw); else forgetDevice(); toast(e.target.checked?"Cet appareil reste connecté":"Verrouillage après 10 min d'inactivité"); };
   $("chgPw").onclick=changePassword; $("exportBtn").onclick=exportData; $("importBtn").onclick=()=>$("importFile").click();
   $("forgetBtn2").onclick=forget;
-  $("hdIn").onchange=e=>{ const v=parseNum(e.target.value); if(!(v>0 && v<24)) { toast("Durée non valide"); e.target.value=fmtN(hday(),NF2); return; } setPref("hday", r2(v)); touch(); render(); };
+  $("pAdd").onclick=()=>{ const d=$("pDate").value; if(!d) return toast("Choisis la date du pont"); addPont(d, $("pName").value.trim()||"Pont"); };
+  $("hdIn").onchange=e=>{ const v=parseNum(e.target.value); if(!(v>0 && v<24)) { toast("Durée non valide"); e.target.value=fmtN(hday(),NF2); return; } logBegin(); setPref("hday", r2(v)); logCommit("pref", `Durée d'une journée : ${fmtHM(r2(v))}`); touch(); setTimeout(render); };
 }
 function openGuide(){
   const sec=[
@@ -1729,6 +1775,8 @@ function openGuide(){
     ["Poser des congés", `<p>Le bouton <b>Poser des jours</b> pose une période d'un coup (seuls les jours travaillés sont pris). Un congé <b>prévu</b> se passe en <b>posé</b> d'une touche, depuis « Mes absences ».</p>`],
     ["Les calculs", `<p>Congés restants = reliquat N-1 + droits N − posés − prévus. Récup restante = report au 1<sup>er</sup> janvier + heures en plus − récup prise, convertie en jours (÷ ${fmtN(hday(),NF2)}), semaines (÷ 5) et mois (÷ 4), comme dans l'Excel.</p>`],
     ["Nouvelle année", `<p>Réglages → <b>Mes droits</b> → « Préparer ${new Date().getFullYear()+1} » : l'app propose de reprendre le restant de l'année en cours.</p>`],
+    ["Ponts", `<p>Réglages → <b>Ponts</b> : ajoute les ponts accordés chaque année (l'app propose ceux qui collent à un férié du mardi ou du jeudi). Ils s'appliquent tout seuls dans le calendrier, comme les fériés.</p>`],
+    ["Historique", `<p>Chaque modification est notée dans l'onglet <b>Historique</b> : date, heure, appareil (iPhone ou ordinateur) et ce qui a changé (avant → après). Le bouton <b>Annuler</b> remet l'état d'avant ; l'annulation est elle-même notée.</p>`],
     ["Changer de mois", `<p>Flèches ‹ › ou glisse le doigt à gauche / à droite. Touche le titre pour revenir à aujourd'hui.</p>`],
   ];
   modal(`<h2>Mode d'emploi</h2><div class="guide">${sec.map(([t,b],i)=>`<details${i===0?" open":""}><summary>${t}</summary><div class="gbody">${b}</div></details>`).join("")}</div>
@@ -1777,6 +1825,100 @@ function importData(file){
     catch(e){ toast("Fichier non reconnu."); }
   };
   r.readAsText(file);
+}
+
+
+function addPont(d, name){
+  const dt=parseIso(d);
+  if(!workDays().includes(dt.getDay())) return toast("Ce jour n'est pas un jour de travail");
+  if(holidays(dt.getFullYear()).has(d)) return toast("Ce jour est déjà férié");
+  if(pontMap().has(d)) return toast("Ce pont existe déjà");
+  logBegin(); setPref("ponts", [...ponts(), {d, name}].sort((a,b)=>a.d<b.d?-1:1));
+  logCommit("pref", `Pont ajouté : ${capF(fmtShort(dt))} ${dt.getFullYear()}${name&&name!=="Pont"?" ("+name+")":""}`);
+  touch(); render(); toast(`Pont ajouté : ${fmtShort(dt)}`);
+}
+
+/* ================= HISTORIQUE ================= */
+/* Chaque modification est notée : date et heure, appareil, et l'état « avant → après » de chaque jour, année ou réglage touché.
+   On peut annuler une ligne : l'état d'avant est remis, et l'annulation est elle-même notée. */
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const DEVICE = /iPhone/.test(navigator.userAgent) ? "iPhone" : /iPad/.test(navigator.userAgent) ? "iPad" : /Android/.test(navigator.userAgent) ? "Téléphone" : "Ordinateur";
+let LOGB = null;
+function daySnap(iso){ const r=S.data.days.find(x=>x.id===iso && !x.deleted); return {code:r && r.code!=null ? r.code : null, h:r && typeof r.h==="number" ? r.h : null, note:(r && r.note) || ""}; }
+function yearSnap(y){ const r=live(S.data.years).find(x=>x.id===String(y)); return r ? {cpN1:Number(r.cpN1)||0, cpN:Number(r.cpN)||0, recup:Number(r.recup)||0} : null; }
+function logBegin(){ LOGB = {days:new Map(), years:new Map(), prefs:new Map()}; }
+function logNote(kind, id, snap){ if(LOGB && !LOGB[kind].has(id)) LOGB[kind].set(id, snap()); }
+function setYear(y, v){
+  logNote("years", String(y), ()=>yearSnap(y));
+  const id=String(y), rr=S.data.years.find(x=>x.id===id), rec={...v, deleted:false, updatedAt:Date.now()};
+  if(rr) Object.assign(rr, rec); else S.data.years.push({id, ...rec});
+}
+const same = (a,b) => JSON.stringify(a)===JSON.stringify(b);
+function logCommit(kind, title, extra){
+  const B=LOGB; LOGB=null; if(!B) return null;
+  const days=[...B.days].map(([iso,b])=>({iso, b, a:daySnap(iso)})).filter(x=>!same(x.b,x.a)).sort((x,y)=>x.iso<y.iso?-1:1);
+  const years=[...B.years].map(([y,b])=>({y, b, a:yearSnap(y)})).filter(x=>!same(x.b,x.a));
+  const prefs=[...B.prefs].map(([id,b])=>{ const q=S.data.prefs.find(x=>x.id===id && !x.deleted); return {id, b, a:q?q.value:null}; }).filter(x=>!same(x.b,x.a));
+  if(!days.length && !years.length && !prefs.length) return null;
+  const e={id:uid(), at:Date.now(), dev:DEVICE, kind, title, days, years, prefs, ...(extra||{}), updatedAt:Date.now()};
+  S.data.log.push(e); return e;
+}
+/* « Congé posé », « Travaillé (auto) »… */
+function effName(iso, code){ if(code!=null && code in CODE) return CODE[code].name; const au=autoCode(parseIso(iso), iso); return CODE[au].name+" (auto)"; }
+function dayChangeText(c){
+  const parts=[];
+  if(c.b.code!==c.a.code) parts.push(`${effName(c.iso,c.b.code)} → <b>${effName(c.iso,c.a.code)}</b>`);
+  if(c.b.h!==c.a.h) parts.push(`heures ${c.b.h==null?"—":fmtHM(c.b.h,true)} → <b>${c.a.h==null?"—":fmtHM(c.a.h,true)}</b>`);
+  if(c.b.note!==c.a.note) parts.push(c.a.note ? `note « ${esc(c.a.note)} »` : "note supprimée");
+  return parts.join(" · ");
+}
+function yearChangeText(c){
+  if(!c.a) return `Droits ${c.y} supprimés`;
+  const f=(k,u)=>{ const b=c.b?c.b[k]:null; return b===c.a[k] ? null : `${b==null?"—":fmtN(b,NF2)} → <b>${fmtN(c.a[k],NF2)}</b> ${u}`; };
+  return [[f("cpN1","j"),"reliquat"],[f("cpN","j"),"congés"],[f("recup","h"),"récup reportée"]].filter(x=>x[0]).map(x=>`${x[1]} ${x[0]}`).join(" · ") || `Droits ${c.y}`;
+}
+function undoLog(e){
+  if(e.undone) return;
+  const moved = e.days.filter(c=>!same(daySnap(c.iso), c.a)).length + e.years.filter(c=>!same(yearSnap(c.y), c.a)).length;
+  if(moved && !confirm(`${moved} élément${moved>1?"s ont":" a"} été modifié${moved>1?"s":""} depuis. Annuler quand même et remettre l'état d'avant ?`)) return;
+  logBegin();
+  for(const c of e.days) setDay(c.iso, {code:c.b.code, h:c.b.h, note:c.b.note});
+  for(const c of e.years){ if(c.b) setYear(c.y, c.b); else { logNote("years", String(c.y), ()=>yearSnap(c.y)); const r=S.data.years.find(x=>x.id===String(c.y)); if(r){ r.deleted=true; r.updatedAt=Date.now(); } } }
+  for(const c of e.prefs) setPref(c.id, c.b);
+  HOLC.clear();
+  logCommit("undo", `Annulation : ${e.title}`, {undoOf:e.id});
+  e.undone=true; e.updatedAt=Date.now();
+  touch(); render(); toast("Modification annulée ✓");
+}
+const LOG_KIND = {day:"Jour", range:"Période", year:"Droits", import:"Import", pref:"Réglage", undo:"Annulation"};
+const LOG_F = [["all","Tout"],["jours","Jours"],["droits","Droits et réglages"],["import","Imports"]];
+function logMatch(e, f){ if(f==="jours") return ["day","range"].includes(e.kind) || (e.kind==="undo" && e.days.length);
+  if(f==="droits") return ["year","pref"].includes(e.kind) || (e.kind==="undo" && !e.days.length); if(f==="import") return e.kind==="import"; return true; }
+function renderLog(){
+  const f=ui.logF||"all", N=ui.logN||60;
+  const all=live(S.data.log).filter(e=>logMatch(e,f)).sort((a,b)=>b.at-a.at);
+  const L=all.slice(0,N);
+  const dkey=t=>{ const d=new Date(t); return isoDate(d); }, today=todayIso(), yest=isoDate(addDays(new Date(),-1));
+  let h=`<div class="accsel logf" role="tablist">${LOG_F.map(([k,l])=>`<button data-logf="${k}" class="${k===f?"on":""}">${l}</button>`).join("")}</div>`;
+  if(!L.length) h+=`<div class="panel"><div class="hint">Aucune modification enregistrée${f!=="all"?" dans cette catégorie":""} pour l'instant. Chaque congé posé, heure saisie, droit modifié ou import apparaîtra ici, avec la date, l'heure et l'appareil.</div></div>`;
+  let cur=null;
+  for(const e of L){
+    const k=dkey(e.at);
+    if(k!==cur){ if(cur) h+=`</div>`; cur=k; const d=parseIso(k);
+      h+=`<div class="jm" style="margin:18px 4px 7px">${k===today?"Aujourd'hui":k===yest?"Hier":fmtDay(d, d.getFullYear()!==new Date().getFullYear())}</div><div class="list">`; }
+    const lines=[...e.days.map(c=>({t:capF(fmtShort(parseIso(c.iso)))+" "+c.iso.slice(0,4), x:dayChangeText(c), iso:c.iso})), ...e.years.map(c=>({t:"Droits "+c.y, x:yearChangeText(c)})),
+      ...e.prefs.filter(c=>c.id==="hday").map(c=>({t:"Réglage", x:c.id==="hday"?`journée ${fmtHM(c.b||DEFAULT_HDAY)} → <b>${fmtHM(c.a)}</b>`:c.id==="workdays"?"jours de travail modifiés":c.id==="holoff"?"jours fériés modifiés":c.id==="ponts"?"liste des ponts modifiée":esc(c.id)}))];
+    const many=lines.length>3;
+    const det = lines.map(l=>`<div class="lg-l"${l.iso?` data-day="${l.iso}"`:""}><span>${esc(l.t)}</span> ${l.x}</div>`).join("");
+    h+=`<div class="lg${e.undone?" undone":""}"><div class="lg-h"><span class="lg-t">${new Date(e.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</span>
+        <div class="main"><div class="lab">${esc(e.title)}</div><div class="meta">${LOG_KIND[e.kind]||""} · ${esc(e.dev||"")}${e.undone?" · <b>annulé</b>":""}</div></div>
+        ${e.undone||e.kind==="undo"?"":`<button class="btn ghost small" data-undo="${e.id}">Annuler</button>`}</div>
+      ${many?`<details class="lg-d"><summary>${lines.length} changements</summary>${det}</details>`:`<div class="lg-d">${det}</div>`}</div>`;
+  }
+  if(cur) h+=`</div>`;
+  if(all.length>N) h+=`<div class="mfoot"><button class="linkbtn" data-logmore>Voir plus (${all.length-N} autres)</button></div>`;
+  h+=`<div class="hint" style="margin:14px 4px">L'historique est chiffré et synchronisé avec tes autres appareils, comme le reste de tes données.</div>`;
+  $("logBody").innerHTML=h;
 }
 
 /* ================= IMPORT EXCEL ================= */
@@ -1890,7 +2032,10 @@ async function importExcel(file){
       bd.querySelector("#iCancel").onclick=close;
       bd.querySelector("#iOk").onclick=()=>{
         const pick=new Set([...bd.querySelectorAll("[data-iy]:checked")].map(x=>Number(x.dataset.iy)));
-        let nd=0;
+        let nd=0; logBegin();
+        { let P=ponts(); for(const yr of Y){ if(!pick.has(yr.y)) continue;
+            P=P.filter(x=>!x.d.startsWith(yr.y+"-")).concat(yr.E.filter(e=>e.code==="G" && workDays().includes(parseIso(e.iso).getDay()) && !holidays(yr.y).has(e.iso)).map(e=>({d:e.iso, name:"Pont"}))); }
+          setPref("ponts", P.sort((a,b)=>a.d<b.d?-1:1)); invalidate(); }
         for(const yr of Y){ if(!pick.has(yr.y)) continue;
           const byIso=new Map(yr.E.map(e=>[e.iso,e]));
           for(let d=new Date(yr.y,0,1); d.getFullYear()===yr.y; d=addDays(d,1)){
@@ -1899,9 +2044,9 @@ async function importExcel(file){
             if(code==null && h==null){ if(ex && (ex.code!=null || typeof ex.h==="number")) setDay(iso,{code:null, h:null}); continue; }
             setDay(iso,{code, h}); nd++;
           }
-          const id=String(yr.y), rr=S.data.years.find(x=>x.id===id), v={cpN1:r2(yr.P.cpN1), cpN:r2(yr.P.cpN), recup:r2(yr.P.recup), deleted:false, updatedAt:Date.now()};
-          if(rr) Object.assign(rr,v); else S.data.years.push({id, ...v});
+          setYear(yr.y, {cpN1:r2(yr.P.cpN1), cpN:r2(yr.P.cpN), recup:r2(yr.P.recup)});
         }
+        logCommit("import", `Import Excel « ${file.name} » (${[...pick].sort().join(", ")})`);
         touch(); close(); toast(`Import terminé ✓ (${[...pick].sort().join(", ")})`);
       };
     });
@@ -1925,7 +2070,7 @@ $("importFile").onchange=e=>{ const f=e.target.files[0]; if(f) importData(f); e.
 $("xlsFile").onchange=e=>{ const f=e.target.files[0]; if(f) importExcel(f); e.target.value=""; };
 document.addEventListener("change", e=>{
   const h=e.target.closest && e.target.closest("[data-hol]");
-  if(h && S.data){ const off=holOff().filter(k=>k!==h.dataset.hol); if(!h.checked) off.push(h.dataset.hol); setPref("holoff", off); HOLC.clear(); touch(); render(); }
+  if(h && S.data){ const off=holOff().filter(k=>k!==h.dataset.hol); if(!h.checked) off.push(h.dataset.hol); logBegin(); setPref("holoff", off); logCommit("pref", `${(holidayList(ui.year).find(x=>x.k===h.dataset.hol)||{}).name||"Jour férié"} : ${h.checked?"férié":"travaillé"}`); HOLC.clear(); touch(); render(); }
 });
 document.addEventListener("click", e=>{
   const t=e.target; let el;
@@ -1933,19 +2078,26 @@ document.addEventListener("click", e=>{
   if(el=t.closest("[data-day]")) return openDay(el.dataset.day);
   if(el=t.closest("[data-addhours]")) return openDay(el.dataset.addhours, true);
   if(el=t.closest("[data-p2c]")){ const [a,b]=el.dataset.p2c.split("|"); let n=0;
-    for(let d=parseIso(a); isoDate(d)<=b; d=addDays(d,1)){ const iso=isoDate(d); if(codeOf(iso,d)==="P"){ setDay(iso,{code:"C"}); n++; } }
-    touch(); render(); toast(`${n} jour${n>1?"s":""} passé${n>1?"s":""} en congé posé`); return; }
+    logBegin(); for(let d=parseIso(a); isoDate(d)<=b; d=addDays(d,1)){ const iso=isoDate(d); if(codeOf(iso,d)==="P"){ setDay(iso,{code:"C"}); n++; } }
+    logCommit("range", `Congé prévu passé en posé (${fmtShort(parseIso(a))} → ${fmtShort(parseIso(b))} ${b.slice(0,4)})`); touch(); render(); toast(`${n} jour${n>1?"s":""} passé${n>1?"s":""} en congé posé`); return; }
   if(el=t.closest("[data-gomonth]")){ ui.month=el.dataset.gomonth; ui.year=Number(ui.month.slice(0,4)); return setTab("month"); }
   if(el=t.closest("[data-yearedit]")) return openYear(Number(el.dataset.yearedit));
   if(el=t.closest("[data-gotab]")) return setTab(el.dataset.gotab);
+  if(el=t.closest("[data-sety]")){ ui.year+=Number(el.dataset.sety); ui.month=ui.year+ui.month.slice(4); render(); return; }
+  if(el=t.closest("[data-pontadd]")){ const [d,n]=el.dataset.pontadd.split("|"); return addPont(d, n); }
+  if(el=t.closest("[data-pontdel]")){ const d=el.dataset.pontdel, x=ponts().find(p=>p.d===d); logBegin(); setPref("ponts", ponts().filter(p=>p.d!==d));
+    logCommit("pref", `Pont retiré : ${capF(fmtShort(parseIso(d)))} ${d.slice(0,4)}${x&&x.name&&x.name!=="Pont"?" ("+x.name+")":""}`); touch(); render(); toast("Pont retiré"); return; }
+  if(el=t.closest("[data-undo]")){ const e=S.data.log.find(x=>x.id===el.dataset.undo); if(e) undoLog(e); return; }
+  if(el=t.closest("[data-logf]")){ ui.logF=el.dataset.logf; ui.logN=60; render(); return; }
+  if(el=t.closest("[data-logmore]")){ ui.logN=(ui.logN||60)+100; render(); return; }
   if(el=t.closest("[data-wd]")){ const d=Number(el.dataset.wd), W=workDays(); const nw = W.includes(d) ? W.filter(x=>x!==d) : [...W,d].sort();
-    if(!nw.length) return toast("Garde au moins un jour de travail"); setPref("workdays", nw); touch(); render(); return; }
+    if(!nw.length) return toast("Garde au moins un jour de travail"); logBegin(); setPref("workdays", nw); logCommit("pref", `Jours de travail : ${nw.slice().sort((x,y)=>((x+6)%7)-((y+6)%7)).map(x=>JOURS_C[x].replace(".","")).join(", ")}`); touch(); render(); return; }
 });
 /* balayer à gauche / à droite pour changer de mois ou d'année */
-(()=>{ let sx=0, sy=0, st=0, skip=false;
+(()=>{ let sx=0, sy=0, st=0, skip=false;  // (pas de balayage sur Historique et Réglages)
   document.querySelector("main").addEventListener("touchstart", e=>{ const p=e.touches[0]; sx=p.clientX; sy=p.clientY; st=Date.now(); skip=!!e.target.closest(".chips, table"); }, {passive:true});
   document.querySelector("main").addEventListener("touchend", e=>{
-    if(skip || ui.tab==="settings" || $("modalRoot").firstElementChild) return;
+    if(skip || ui.tab==="settings" || ui.tab==="log" || $("modalRoot").firstElementChild) return;
     const p=e.changedTouches[0], dx=p.clientX-sx, dy=p.clientY-sy;
     if(Date.now()-st<600 && Math.abs(dx)>70 && Math.abs(dy)<45) shiftPeriod(dx<0?1:-1);
   }, {passive:true});
