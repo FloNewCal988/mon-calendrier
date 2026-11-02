@@ -921,6 +921,8 @@ table.acct tr[data-month]{cursor:pointer}
 .kpi-m div{display:flex;justify-content:space-between;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
 .kpi-m b{color:var(--ink);font-weight:700}
 .kpi-m b.pos{color:var(--pos)} .kpi-m b.neg{color:var(--neg)}
+.dc .c.tot{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.dc .c.tot.x{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -1493,8 +1495,11 @@ function cellHTML(d, today){
   const iso=isoDate(d), c=codeOf(iso,d), r=dmap().get(iso), k=CODE[c];
   const explicitH = r && typeof r.h==="number" && Math.abs(r.h)>0.004 ? r.h : null;
   const cls = "dc k-"+k.css+(iso===today?" today":"")+(r && r.note?" note":"");
-  const label = c==="F" && !k.short ? "" : k.short;
-  return `<button class="${cls}" data-day="${iso}" aria-label="${esc(fmtDay(d)+" : "+k.name+(explicitH?" "+fmtHM(explicitH,true):""))}"><span class="n">${d.getDate()}</span><span class="c">${esc(label)}</span>${explicitH!=null?`<span class="h ${explicitH>0?"p":"m"}">${fmtHM(explicitH,true)}</span>`:""}</button>`;
+  // jour travaillé : durée totale de la journée (journée normale ± heures de récup), ex. 7h48 + 2h30 = 10h18
+  const showTot = c==="#" || (c==="T" && explicitH!=null);
+  const tot = hday() + (explicitH||0);
+  const label = showTot ? (tot<=0.01 ? "Récup" : fmtHM(tot)) : k.short;
+  return `<button class="${cls}" data-day="${iso}" aria-label="${esc(fmtDay(d)+" : "+k.name+(explicitH?" "+fmtHM(explicitH,true):""))}"><span class="n">${d.getDate()}</span><span class="c${showTot?" tot"+(explicitH!=null?" x":""):""}">${esc(label)}</span>${explicitH!=null?`<span class="h ${explicitH>0?"p":"m"}">${fmtHM(explicitH,true)}</span>`:""}</button>`;
 }
 function monthGridHTML(y, mm){
   const today=todayIso(), first=new Date(y,mm-1,1), n=new Date(y,mm,0).getDate(), off=(first.getDay()+6)%7;
