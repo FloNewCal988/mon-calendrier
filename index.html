@@ -1096,7 +1096,7 @@ const CODES = [
   {k:"F", css:"F", name:"Férié",         short:"Férié"},
   {k:"#", css:"W", name:"Travaillé",     short:""},
   {k:"T", css:"T", name:"À travailler",  short:""},
-  {k:"O", css:"O", name:"Formation",     short:"Form."},
+  {k:"O", css:"O", name:"Formation (travaillé)", short:"Form."},
   {k:"E", css:"E", name:"Congé exceptionnel", short:"Excep."},
   {k:"-", css:"X", name:"Non travaillé", short:"—"},
   {k:"",  css:"Z", name:"Repos",         short:""},
@@ -1208,15 +1208,16 @@ function yearParams(y, depth){
 function stats(y, depth){
   if(STC.has(y)) return STC.get(y);
   const P=yearParams(y, depth), hd=hday(), today=todayIso();
-  const cnt={C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0}, mon=[];
+  const cnt={C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0,Of:0}, mon=[];
   let net=0, plus=0, minus=0, cFut=0, futMinus=0, cpUsed=0;
   for(let m=0;m<12;m++){
-    const s={plus:0, minus:0, cnt:{C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0}, n:0, imp:0, impProj:0, impRec:0};
+    const s={plus:0, minus:0, cnt:{C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0,Of:0}, n:0, imp:0, impProj:0, impRec:0};
     const nd=new Date(y,m+1,0).getDate();
     for(let d=1; d<=nd; d++){
       const dt=new Date(y,m,d), iso=isoDate(dt), c=codeOf(iso,dt), h=hoursOf(iso,c);
       if(c in cnt){ cnt[c]++; s.cnt[c]++; }
       if(c==="C" && iso>today) cFut++;
+      if(c==="O" && iso>today){ cnt.Of++; s.cnt.Of++; }
       // impôts : un jour travaillé ou de récup compte comme travaillé (congés, fériés, ponts, repos : non)
       if(c==="#" || c==="R" || c==="T" || c==="O"){ s.impProj++; if(iso<=today){ s.imp++; if(c==="R" || h <= -hd+0.01) s.impRec++; } }
       if(h>0) s.plus+=h; else if(h<0){ s.minus+=h; if(iso>today) futMinus+=h; }
@@ -1504,9 +1505,10 @@ function cellHTML(d, today){
   const cls = "dc k-"+k.css+(iso===today?" today":"")+(r && r.note?" note":"");
   // jour travaillé : durée totale de la journée (journée normale ± heures de récup), ex. 7h48 + 2h30 = 10h18
   const showTot = c==="#" || (c==="T" && explicitH!=null);
+  const isForm = c==="O";
   const tot = hday() + (explicitH||0);
   const label = showTot ? (tot<=0.01 ? "Récup" : fmtHM(tot)) : k.short;
-  return `<button class="${cls}" data-day="${iso}" aria-label="${esc(fmtDay(d)+" : "+k.name+(explicitH?" "+fmtHM(explicitH,true):""))}"><span class="n">${d.getDate()}</span><span class="c${showTot?" tot"+(explicitH!=null?" x":""):""}">${esc(label)}</span>${explicitH!=null?`<span class="h ${explicitH>0?"p":"m"}">${fmtHM(explicitH,true)}</span>`:""}</button>`;
+  return `<button class="${cls}" data-day="${iso}" aria-label="${esc(fmtDay(d)+" : "+k.name+(explicitH?" "+fmtHM(explicitH,true):""))}"><span class="n">${d.getDate()}</span><span class="c${showTot?" tot"+(explicitH!=null?" x":""):""}">${esc(label)}</span>${isForm?`<span class="c tot${explicitH!=null?" x":""}">${tot<=0.01?"":fmtHM(tot)}</span>`:""}${explicitH!=null?`<span class="h ${explicitH>0?"p":"m"}">${fmtHM(explicitH,true)}</span>`:""}</button>`;
 }
 function monthGridHTML(y, mm){
   const today=todayIso(), first=new Date(y,mm-1,1), n=new Date(y,mm,0).getDate(), off=(first.getDay()+6)%7;
@@ -1522,7 +1524,11 @@ function monthGridHTML(y, mm){
 function countsHTML(c, withT){
   const items=[["#","Travaillés"],["T","À travailler"],["C","Congés posés"],["P","Congés prévus"],["E","Congés except."],["O","Formation"],["R","Récup"],["F","Fériés"],["G","Ponts"],["-","Non travaillés"]]
     .filter(([k])=>c[k] || (k==="#") || (withT && k==="T"));
-  return `<div class="counts">${items.map(([k,l])=>`<div class="cnt k-${CODE[k].css}"><b class="num">${c[k]}</b><span>${l}</span></div>`).join("")}</div>`;
+  // la formation est un jour travaillé : comptée dans « Travaillés » (et rappelée à part)
+  // formation passée → « Travaillés », formation à venir → « À travailler » ; la tuile Formation rappelle le total
+  const val = k => k==="#" ? c["#"]+(c.O||0)-(c.Of||0) : k==="T" ? c.T+(c.Of||0) : c[k];
+  const order = items.filter(x=>x[0]!=="O"); const io=order.findIndex(x=>x[0]==="T"); const fo=items.find(x=>x[0]==="O"); if(fo) order.splice((io<0?order.findIndex(x=>x[0]==="#"):io)+1,0,fo);
+  return `<div class="counts">${order.map(([k,l])=>`<div class="cnt k-${CODE[k].css}"><b class="num">${val(k)}</b><span>${l}</span></div>`).join("")}</div>`;
 }
 function upcomingHTML(){
   const t=todayIso(), y=new Date().getFullYear();
