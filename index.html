@@ -1206,7 +1206,7 @@ function stats(y, depth){
   if(STC.has(y)) return STC.get(y);
   const P=yearParams(y, depth), hd=hday(), today=todayIso();
   const cnt={C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0}, mon=[];
-  let net=0, plus=0, minus=0, cFut=0, futMinus=0;
+  let net=0, plus=0, minus=0, cFut=0, futMinus=0, cpUsed=0;
   for(let m=0;m<12;m++){
     const s={plus:0, minus:0, cnt:{C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0}, n:0, imp:0, impProj:0, impRec:0};
     const nd=new Date(y,m+1,0).getDate();
@@ -1221,6 +1221,7 @@ function stats(y, depth){
     }
     s.plus=r2(s.plus); s.minus=r2(s.minus); s.net=r2(s.plus+s.minus);
     s.start=r2(P.recup+net); net+=s.net; s.end=r2(P.recup+net); plus+=s.plus; minus+=s.minus;
+    s.cpStart=P.cpN1+P.cpN-cpUsed; cpUsed+=s.cnt.C+s.cnt.P; s.cpEnd=P.cpN1+P.cpN-cpUsed;
     mon.push(s);
   }
   const cpTot=P.cpN1+P.cpN, cpRest=cpTot-cnt.C-cnt.P, recRest=r2(P.recup+net);
@@ -1478,7 +1479,8 @@ function kpisHTML(st, mi){
   h += `<div class="hero2">
     <div class="kpi${st.cpRest<0?" neg":""}"><div class="lead"><i style="background:var(--k-C)"></i>Congés restants</div>
       <div class="big num">${fmtN(st.cpRest)}<small>j</small></div>
-      <div class="sub"><b>${fmtN(st.cpTot)}</b> droits · <b>${st.cnt.C}</b> posé${st.cnt.C>1?"s":""}${st.cnt.P?` · <b>${st.cnt.P}</b> prévu${st.cnt.P>1?"s":""}`:""}</div></div>
+      <div class="sub">${mi!=null?`sur l'année ${st.y}<br>`:""}<b>${fmtN(st.cpTot)}</b> droits · <b>${st.cnt.C}</b> posé${st.cnt.C>1?"s":""}${st.cnt.P?` · <b>${st.cnt.P}</b> prévu${st.cnt.P>1?"s":""}`:""}</div>
+      ${mi!=null?`<div class="kpi-m"><div><span>Début ${MOIS_C[mi]}</span><b class="num">${fmtJ(st.mon[mi].cpStart)}</b></div><div><span>Fin ${MOIS_C[mi]}</span><b class="num${st.mon[mi].cpEnd<st.mon[mi].cpStart?" neg":""}">${fmtJ(st.mon[mi].cpEnd)}</b></div></div>`:""}</div>
     <div class="kpi${st.recRest<0?" neg":""}"><div class="lead"><i style="background:var(--k-R)"></i>Récup restante</div>
       <div class="big num">${fmtN(st.recRest)}<small>h</small></div>
       <div class="sub">${mi!=null?`sur l'année ${st.y}<br>`:""}soit <b>${fmtJ(st.recDays)}</b> · ${fmtN(st.recWeeks)} sem.${st.futMinus<0?`<br>dont ${fmtHM(st.futMinus)} déjà prévues`:""}</div>
@@ -1535,6 +1537,15 @@ function absRow(p){
 function renderMonth(){
   const [y,mm]=ui.month.split("-").map(Number), st=stats(y), ms=st.mon[mm-1], mname=MOIS[mm-1];
   const isCur = ui.month===calMonth(new Date());
+  const used = ms.cnt.C+ms.cnt.P;
+  const cpPanel = `<div class="panel"><h3>Congés de ${mname}</h3>
+      <div class="srow"><span class="k">Solde au 1er ${mname}</span><span class="v num">${fmtJ(ms.cpStart)}</span></div>
+      <div class="srow"><span class="k">Congés posés</span><span class="v num${ms.cnt.C?" m":""}">${ms.cnt.C?"−":""}${fmtJ(ms.cnt.C)}</span></div>
+      ${ms.cnt.P?`<div class="srow"><span class="k">Congés prévus</span><span class="v num m">−${fmtJ(ms.cnt.P)}</span></div>`:""}
+      <div class="srow"><span class="k"><b>Bilan du mois</b></span><span class="v num${used?" m":""}"><b>${used?"−":""}${fmtJ(used)}</b></span></div>
+      <div class="srow total"><span class="k">Solde fin ${mname}</span><span class="v num${ms.cpEnd<0?" neg":""}">${fmtJ(ms.cpEnd)}</span></div>
+      ${ms.cnt.E?`<div class="hint">+ ${ms.cnt.E} congé${ms.cnt.E>1?"s":""} exceptionnel${ms.cnt.E>1?"s":""}, non décompté${ms.cnt.E>1?"s":""}.</div>`:""}
+    </div>`;
   const recPanel = `<div class="panel"><h3>Récup de ${mname}</h3>
       <div class="srow"><span class="k">Solde au 1er ${mname}</span><span class="v num">${fmtH(ms.start)}</span></div>
       <div class="srow"><span class="k">Heures en plus</span><span class="v num p">${fmtH(ms.plus,true)}</span></div>
@@ -1545,7 +1556,7 @@ function renderMonth(){
     </div>`;
   const cntPanel = `<div class="panel"><h3>Jours de ${mname}</h3>${countsHTML(ms.cnt, true)}</div>`;
   $("monthBody").innerHTML = `<div class="mlay"><div>${kpisHTML(st, mm-1)}${monthGridHTML(y,mm)}${legendHTML()}</div>
-    <aside>${recPanel}${cntPanel}${upcomingHTML()}</aside></div>`;
+    <aside>${cpPanel}${recPanel}${cntPanel}${upcomingHTML()}</aside></div>`;
 }
 
 /* ---------- onglet Année ---------- */
