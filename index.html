@@ -751,13 +751,13 @@ nav.tabs button{font-size:10.5px}
 
 /* ================= MON CALENDRIER ================= */
 :root{
-  --k-C:#1E9E6A; --k-P:#5DBB91; --k-R:#8A5CD6; --k-F:#DD5636; --k-G:#D9960F; --k-W:#8C98AE; --k-X:#A9B1BF;
+  --k-C:#1E9E6A; --k-P:#5DBB91; --k-R:#8A5CD6; --k-F:#DD5636; --k-G:#D9960F; --k-W:#8C98AE; --k-X:#A9B1BF; --k-O:#2F7FD1; --k-E:#C2478A;
 }
 @media (prefers-color-scheme: dark){
-  :root{ --k-C:#3DD49A; --k-P:#3E9C77; --k-R:#AE8BF5; --k-F:#FF8566; --k-G:#F2BC45; --k-W:#6B7A99; --k-X:#56627C; }
+  :root{ --k-C:#3DD49A; --k-P:#3E9C77; --k-R:#AE8BF5; --k-F:#FF8566; --k-G:#F2BC45; --k-W:#6B7A99; --k-X:#56627C; --k-O:#6AAEFF; --k-E:#F07BBE; }
 }
 .ptitle h1 button::after{display:none}
-.k-C{--kc:var(--k-C)} .k-P{--kc:var(--k-P)} .k-R{--kc:var(--k-R)} .k-F{--kc:var(--k-F)} .k-G{--kc:var(--k-G)}
+.k-C{--kc:var(--k-C)} .k-P{--kc:var(--k-P)} .k-R{--kc:var(--k-R)} .k-F{--kc:var(--k-F)} .k-G{--kc:var(--k-G)} .k-O{--kc:var(--k-O)} .k-E{--kc:var(--k-E)}
 .k-W{--kc:var(--k-W)} .k-T{--kc:var(--k-W)} .k-X{--kc:var(--k-X)} .k-Z{--kc:transparent}
 
 /* chiffres clés */
@@ -1087,11 +1087,13 @@ const CODES = [
   {k:"F", css:"F", name:"Férié",         short:"Férié"},
   {k:"#", css:"W", name:"Travaillé",     short:""},
   {k:"T", css:"T", name:"À travailler",  short:""},
+  {k:"O", css:"O", name:"Formation",     short:"Form."},
+  {k:"E", css:"E", name:"Congé exceptionnel", short:"Excep."},
   {k:"-", css:"X", name:"Non travaillé", short:"—"},
   {k:"",  css:"Z", name:"Repos",         short:""},
 ];
 const CODE = Object.fromEntries(CODES.map(c=>[c.k,c]));
-const ABS = ["C","P","R","G"];                 // absences regroupées en périodes
+const ABS = ["C","P","R","G","E"];                 // absences regroupées en périodes
 const DEFAULT_HDAY = 7.8;
 
 let S = { pw:null, token:null, cfg:null, data:null, dirty:false };
@@ -1197,17 +1199,17 @@ function yearParams(y, depth){
 function stats(y, depth){
   if(STC.has(y)) return STC.get(y);
   const P=yearParams(y, depth), hd=hday(), today=todayIso();
-  const cnt={C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0}, mon=[];
+  const cnt={C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0}, mon=[];
   let net=0, plus=0, minus=0, cFut=0, futMinus=0;
   for(let m=0;m<12;m++){
-    const s={plus:0, minus:0, cnt:{C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0}, n:0, imp:0, impProj:0, impRec:0};
+    const s={plus:0, minus:0, cnt:{C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0,O:0,E:0}, n:0, imp:0, impProj:0, impRec:0};
     const nd=new Date(y,m+1,0).getDate();
     for(let d=1; d<=nd; d++){
       const dt=new Date(y,m,d), iso=isoDate(dt), c=codeOf(iso,dt), h=hoursOf(iso,c);
       if(c in cnt){ cnt[c]++; s.cnt[c]++; }
       if(c==="C" && iso>today) cFut++;
       // impôts : un jour travaillé ou de récup compte comme travaillé (congés, fériés, ponts, repos : non)
-      if(c==="#" || c==="R" || c==="T"){ s.impProj++; if(iso<=today){ s.imp++; if(c==="R" || h <= -hd+0.01) s.impRec++; } }
+      if(c==="#" || c==="R" || c==="T" || c==="O"){ s.impProj++; if(iso<=today){ s.imp++; if(c==="R" || h <= -hd+0.01) s.impRec++; } }
       if(h>0) s.plus+=h; else if(h<0){ s.minus+=h; if(iso>today) futMinus+=h; }
       if(h) s.n++;
     }
@@ -1478,7 +1480,7 @@ function kpisHTML(st){
   return h;
 }
 function legendHTML(){
-  return `<div class="legend2">${["C","P","R","G","F","#","T"].map(k=>`<span><i class="k-${CODE[k].css}"></i>${CODE[k].name}</span>`).join("")}</div>`;
+  return `<div class="legend2">${["C","P","E","R","G","F","O","#","T"].map(k=>`<span><i class="k-${CODE[k].css}"></i>${CODE[k].name}</span>`).join("")}</div>`;
 }
 
 /* ---------- onglet Mois ---------- */
@@ -1501,7 +1503,7 @@ function monthGridHTML(y, mm){
   return h+`</div>`;
 }
 function countsHTML(c, withT){
-  const items=[["#","Travaillés"],["T","À travailler"],["C","Congés posés"],["P","Congés prévus"],["R","Récup"],["F","Fériés"],["G","Ponts"],["-","Non travaillés"]]
+  const items=[["#","Travaillés"],["T","À travailler"],["C","Congés posés"],["P","Congés prévus"],["E","Congés except."],["O","Formation"],["R","Récup"],["F","Fériés"],["G","Ponts"],["-","Non travaillés"]]
     .filter(([k])=>c[k] || (k==="#") || (withT && k==="T"));
   return `<div class="counts">${items.map(([k,l])=>`<div class="cnt k-${CODE[k].css}"><b class="num">${c[k]}</b><span>${l}</span></div>`).join("")}</div>`;
 }
@@ -1571,7 +1573,7 @@ function renderYear(){
       <table class="acct" style="margin-top:6px"><thead><tr><th>Mois</th><th>Travaillés</th><th>dont récup</th></tr></thead><tbody>
       ${st.mon.map((m,i)=>`<tr><td style="text-transform:capitalize">${MOIS[i]}</td><td class="num">${m.imp}${m.impProj>m.imp?` <span class="hint" style="display:inline;margin:0">/ ${m.impProj}</span>`:""}</td><td class="num">${m.impRec||"·"}</td></tr>`).join("")}
       </tbody></table></details>
-    <div class="hint">Compte les jours travaillés et les jours de récup (journée entière ou heures prises), sans les congés, fériés, ponts ni week-ends.${ended?"":" « / » : prévision du mois avec les jours à travailler."}</div></div>`;
+    <div class="hint">Compte les jours travaillés, de formation et de récup (journée entière ou heures prises), sans les congés (y compris exceptionnels), fériés, ponts ni week-ends.${ended?"":" « / » : prévision du mois avec les jours à travailler."}</div></div>`;
   const P2 = periods(y);
   const ab = `<div class="panel"><h3>Mes absences ${y}</h3>${P2.length ? P2.map(absRow).join("") : `<div class="hint">Aucun congé, récup ou pont pour l'instant. Touche « Poser des jours » pour en ajouter.</div>`}</div>`;
   $("yearBody").innerHTML = `${kpisHTML(st)}<div class="minis">${Array.from({length:12},(_,m)=>miniHTML(y,m)).join("")}</div>${legendHTML()}
@@ -1607,7 +1609,7 @@ function openDay(iso, focusHours){
   let code = r.code!=null && r.code in CODE ? r.code : null;
   const hol = holidays(d.getFullYear()).get(iso);
   const autoName = auto==="" ? "Repos" : auto==="F" ? "Férié" : auto==="G" ? "Pont" : auto==="#" ? "Travaillé" : "À travailler";
-  const opts = [["auto", `Auto · ${autoName}`, CODE[auto].css], ...["C","P","R","G","F","#","-"].filter(k=>k!==auto || k==="F").filter(k=>!(k==="F" && auto==="F")).map(k=>[k, CODE[k].name, CODE[k].css])];
+  const opts = [["auto", `Auto · ${autoName}`, CODE[auto].css], ...["C","P","E","R","G","O","F","#","-"].filter(k=>k!==auto || k==="F").filter(k=>!(k==="F" && auto==="F")).map(k=>[k, CODE[k].name, CODE[k].css])];
   const curV = code==null || code===auto ? "auto" : code;
   const hasH = typeof r.h==="number" && r.h!==0;
   const sign0 = hasH && r.h<0 ? "-" : (!hasH && (code==="R")) ? "-" : "+";
@@ -1632,7 +1634,7 @@ function openDay(iso, focusHours){
     }
     function upd(){
       const c=getCode(), dur=parseDur(q("#dDur").value), s=getSign();
-      q("#dCodeHint").textContent = c==="R" ? `Une journée de récup compte ${fmtHM(-hd)} si tu ne mets pas d'heures.` : c==="P" ? "Prévu : compte dans tes congés, à passer en « posé » une fois validé." : "";
+      q("#dCodeHint").textContent = c==="R" ? `Une journée de récup compte ${fmtHM(-hd)} si tu ne mets pas d'heures.` : c==="P" ? "Prévu : compte dans tes congés, à passer en « posé » une fois validé." : c==="E" ? "Congé exceptionnel : n'est pas décompté de tes congés annuels." : c==="O" ? "Formation : comptée comme jour travaillé (impôts)." : "";
       const el=q("#dCalc");
       if(dur==null) el.innerHTML = c==="R" ? `Récup : <b>${fmtHM(-hd)}</b>` : "";
       else if(isNaN(dur) || dur<0 || dur>24) el.innerHTML = `<span class="neg">Durée non reconnue (ex. 2h30, 2:30 ou 2,5)</span>`;
@@ -1662,7 +1664,7 @@ function openRange(from){
   modal(`<h2>Poser des jours</h2><div class="hint" style="margin-top:0">Seuls les jours travaillés de la période sont modifiés (week-ends et fériés ne comptent pas).</div>
     <div class="row2" style="grid-template-columns:1fr 1fr"><div><label>Du</label><input class="field" type="date" id="rFrom" value="${from}"></div><div><label>Au</label><input class="field" type="date" id="rTo" value="${from}"></div></div>
     <label>Motif</label>
-    <div class="motifs" id="rCode">${["C","P","R","G"].map((k,i)=>`<button class="mbtn${i===0?" on":""}" data-v="${k}"><i class="k-${CODE[k].css}"></i>${CODE[k].name}</button>`).join("")}<button class="mbtn" data-v="auto"><i class="k-W"></i>Remettre en automatique</button></div>
+    <div class="motifs" id="rCode">${["C","P","E","R","G","O"].map((k,i)=>`<button class="mbtn${i===0?" on":""}" data-v="${k}"><i class="k-${CODE[k].css}"></i>${CODE[k].name}</button>`).join("")}<button class="mbtn" data-v="auto"><i class="k-W"></i>Remettre en automatique</button></div>
     <div class="calc" id="rInfo" style="margin-top:12px"></div>
     <div class="actions"><span class="spacer"></span><button class="btn ghost" id="rCancel">Annuler</button><button class="btn" id="rOk">Valider</button></div>`,
   (bd, close)=>{
@@ -1786,7 +1788,7 @@ function openGuide(){
     ["Les couleurs du calendrier", `<p>Comme dans ton Excel : <b>Congé posé</b> (C), <b>Congé prévu</b> (P, hachuré), <b>Récup</b> (R), <b>Pont</b> (G), <b>Férié</b> (F). Les jours de semaine passés comptent automatiquement comme <b>travaillés</b> (#) et ceux à venir comme <b>à travailler</b> (T) : plus besoin de les remplir.</p>`],
     ["Saisir des heures", `<p>Touche un jour, puis « Heures de récup » : <b>+ En plus</b> pour les heures supplémentaires, <b>− Prise</b> pour la récup posée. Tu peux écrire 2h30, 2:30 ou 2,5. Une journée entière de récup = ${fmtHM(hday())} (réglable).</p>`],
     ["Poser des congés", `<p>Le bouton <b>Poser des jours</b> pose une période d'un coup (seuls les jours travaillés sont pris). Un congé <b>prévu</b> se passe en <b>posé</b> d'une touche, depuis « Mes absences ».</p>`],
-    ["Les calculs", `<p>Congés restants = reliquat N-1 + droits N − posés − prévus. Récup restante = report au 1<sup>er</sup> janvier + heures en plus − récup prise, convertie en jours (÷ ${fmtN(hday(),NF2)}), semaines (÷ 5) et mois (÷ 4), comme dans l'Excel.</p>`],
+    ["Les calculs", `<p>Congés restants = reliquat N-1 + droits N − posés − prévus (les congés exceptionnels ne sont pas décomptés). Récup restante = report au 1<sup>er</sup> janvier + heures en plus − récup prise, convertie en jours (÷ ${fmtN(hday(),NF2)}), semaines (÷ 5) et mois (÷ 4), comme dans l'Excel.</p>`],
     ["Nouvelle année", `<p>Réglages → <b>Mes droits</b> → « Préparer ${new Date().getFullYear()+1} » : l'app propose de reprendre le restant de l'année en cours.</p>`],
     ["Ponts", `<p>Réglages → <b>Ponts</b> : ajoute les ponts accordés chaque année (l'app propose ceux qui collent à un férié du mardi ou du jeudi). Ils s'appliquent tout seuls dans le calendrier, comme les fériés.</p>`],
     ["Impôts", `<p>Onglet <b>Année</b> → « Pour les impôts » : le nombre de jours travaillés de l'année, où les <b>jours de récup comptent comme travaillés</b> (journée R, ou journée travaillée avec des heures de récup prises). Les congés, fériés, ponts et week-ends n'y sont pas. Détail mois par mois disponible.</p>`],
@@ -1835,7 +1837,7 @@ function importData(file){
   const r = new FileReader();
   r.onload = ()=>{
     try{ const d = JSON.parse(r.result); if(!Array.isArray(d.days)) throw 0;
-      S.data = merge(S.data, d); seedDefaults(); touch(); render(); toast("Sauvegarde fusionnée ✓"); }
+      S.data = merge(S.data, d); seedDefaults(); touch(); render(); toast(d.title ? d.title+" ✓" : "Sauvegarde fusionnée ✓"); }
     catch(e){ toast("Fichier non reconnu."); }
   };
   r.readAsText(file);

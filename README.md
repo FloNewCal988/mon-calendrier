@@ -2,7 +2,7 @@
 
 Petite application personnelle (iPhone + ordinateur) qui reprend le fonctionnement du classeur **Calendrier 2026.xlsx** (onglets « Calendrier AAAA - VF ») :
 
-- **Mois** : le calendrier du mois, semaine par semaine (numéros de semaine à gauche), avec les mêmes motifs que l'Excel : *Congé posé (C), Congé prévu (P), Récup (R), Pont (G), Férié (F), Travaillé (#), À travailler (T)*.
+- **Mois** : le calendrier du mois, semaine par semaine (numéros de semaine à gauche), avec les mêmes motifs que l'Excel : *Congé posé (C), Congé prévu (P), Récup (R), Pont (G), Férié (F), Travaillé (#), À travailler (T)*, plus **Formation** (comptée travaillée) et **Congé exceptionnel** (non décompté des congés annuels).
   Les jours de semaine passés comptent **automatiquement** comme travaillés, ceux à venir comme à travailler, et les jours fériés de Nouvelle-Calédonie sont déjà placés.
   Touche un jour pour changer son motif ou saisir des **heures de récup** : + en plus / − prise (2h30, 2:30 ou 2,5), avec une note.
 - **Poser des jours** : une période d'un coup (seuls les jours travaillés sont pris). Un congé **prévu** passe en **posé** d'une touche.
