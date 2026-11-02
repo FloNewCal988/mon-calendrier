@@ -1534,6 +1534,7 @@ function renderMonth(){
       <div class="srow"><span class="k">Solde au 1er ${mname}</span><span class="v num">${fmtH(ms.start)}</span></div>
       <div class="srow"><span class="k">Heures en plus</span><span class="v num p">${fmtH(ms.plus,true)}</span></div>
       <div class="srow"><span class="k">Récup prise</span><span class="v num m">${fmtH(ms.minus)}</span></div>
+      <div class="srow"><span class="k"><b>Bilan du mois</b> <span class="hint" style="display:inline;margin:0">(en plus − prise)</span></span><span class="v num ${ms.net>0?"p":ms.net<0?"m":""}"><b>${fmtH(ms.net,true)}</b></span></div>
       <div class="srow total"><span class="k">Solde fin ${mname}</span><span class="v num">${fmtH(ms.end)}</span></div>
       <div class="more"><button class="btn ghost small" data-addhours="${isCur?todayIso():ui.month+"-01"}">Saisir des heures</button></div>
     </div>`;
@@ -1565,6 +1566,7 @@ function renderYear(){
     <div class="srow"><span class="k">Report au 1er janvier</span><span class="v num">${fmtH(P.recup)} <span class="hint" style="display:inline;margin:0">· ${fmtJ(P.recup/hd)}</span></span></div>
     <div class="srow"><span class="k">Heures en plus</span><span class="v num p">${fmtH(st.plus,true)}</span></div>
     <div class="srow"><span class="k">Récup prise</span><span class="v num m">${fmtH(st.minus)}</span></div>
+    <div class="srow"><span class="k"><b>Bilan de l'année</b></span><span class="v num ${st.net>0?"p":st.net<0?"m":""}"><b>${fmtH(st.net,true)}</b></span></div>
     <div class="srow total"><span class="k">Restante</span><span class="v num${st.recRest<0?" neg":""}">${fmtH(st.recRest)}</span></div>
     <div class="srow"><span class="k">soit</span><span class="v num">${fmtJ(st.recDays)} · ${fmtN(st.recWeeks)} sem. · ${fmtN(st.recMonths)} mois</span></div>
     <div class="more"><button class="btn ghost small" data-gotab="recup">Détail mois par mois</button></div></div>`;
