@@ -13,6 +13,7 @@ Petite application personnelle (iPhone + ordinateur) qui reprend le fonctionneme
   - La liste de tes absences de l'année
 - **Récup** : le tableau mois par mois (solde au 1er, REC+, REC−, bilan) et le journal de toutes les heures saisies.
 - **Ponts** (Réglages) : comme les jours fériés, mais choisis année par année. L'app propose les ponts possibles (lundi avant un férié du mardi, vendredi après un férié du jeudi) et tu peux en ajouter à la date de ton choix. Les ponts de l'Excel sont repris à l'import.
+- **Impôts** (onglet Année) : nombre de jours travaillés de l'année où **les jours de récup comptent comme travaillés**, avec le détail par mois et une prévision de fin d'année.
 - **Historique** : chaque ajout, modification ou suppression est noté (date, heure, appareil, et « avant → après » pour chaque jour, droit ou réglage). Filtres Jours / Droits et réglages / Imports, et un bouton **Annuler** sur chaque ligne pour remettre l'état d'avant (l'annulation est elle-même notée). L'historique est chiffré avec le reste des données.
 - **Import Excel** (Réglages) : reprend les onglets « Calendrier 2025 - VF », « 2026 - VF », « 2027 - VF » (et l'ancien « Calendrier 2024 »). La feuille « Crise » et les autres sont ignorées. Le fichier est lu sur l'appareil, il n'est envoyé nulle part.
 

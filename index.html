@@ -1200,12 +1200,14 @@ function stats(y, depth){
   const cnt={C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0}, mon=[];
   let net=0, plus=0, minus=0, cFut=0, futMinus=0;
   for(let m=0;m<12;m++){
-    const s={plus:0, minus:0, cnt:{C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0}, n:0};
+    const s={plus:0, minus:0, cnt:{C:0,P:0,R:0,G:0,F:0,"#":0,T:0,"-":0}, n:0, imp:0, impProj:0, impRec:0};
     const nd=new Date(y,m+1,0).getDate();
     for(let d=1; d<=nd; d++){
       const dt=new Date(y,m,d), iso=isoDate(dt), c=codeOf(iso,dt), h=hoursOf(iso,c);
       if(c in cnt){ cnt[c]++; s.cnt[c]++; }
       if(c==="C" && iso>today) cFut++;
+      // impôts : un jour travaillé ou de récup compte comme travaillé (congés, fériés, ponts, repos : non)
+      if(c==="#" || c==="R" || c==="T"){ s.impProj++; if(iso<=today){ s.imp++; if(c==="R" || h <= -hd+0.01) s.impRec++; } }
       if(h>0) s.plus+=h; else if(h<0){ s.minus+=h; if(iso>today) futMinus+=h; }
       if(h) s.n++;
     }
@@ -1214,7 +1216,8 @@ function stats(y, depth){
     mon.push(s);
   }
   const cpTot=P.cpN1+P.cpN, cpRest=cpTot-cnt.C-cnt.P, recRest=r2(P.recup+net);
-  const out={y, P, cnt, mon, net:r2(net), plus:r2(plus), minus:r2(minus), cpTot, cpRest, cFut, futMinus:r2(futMinus),
+  const imp=mon.reduce((a,s)=>a+s.imp,0), impProj=mon.reduce((a,s)=>a+s.impProj,0), impRec=mon.reduce((a,s)=>a+s.impRec,0);
+  const out={y, P, cnt, mon, imp, impProj, impRec, net:r2(net), plus:r2(plus), minus:r2(minus), cpTot, cpRest, cFut, futMinus:r2(futMinus),
     recRest, recDays:recRest/hd, recWeeks:recRest/hd/5, recMonths:recRest/hd/5/4};
   STC.set(y, out); return out;
 }
@@ -1559,10 +1562,20 @@ function renderYear(){
     <div class="srow"><span class="k">soit</span><span class="v num">${fmtJ(st.recDays)} · ${fmtN(st.recWeeks)} sem. · ${fmtN(st.recMonths)} mois</span></div>
     <div class="more"><button class="btn ghost small" data-gotab="recup">Détail mois par mois</button></div></div>`;
   const ds = `<div class="panel"><h3>Jours de l'année</h3>${countsHTML(st.cnt, true)}</div>`;
+  const ended = todayIso() >= y+"-12-31", started = todayIso() >= y+"-01-01";
+  const tx = `<div class="panel"><h3>Pour les impôts</h3>
+    <div class="srow total"><span class="k">Jours travaillés ${ended?y:"à ce jour"}</span><span class="v num">${started?st.imp:0} j</span></div>
+    <div class="srow"><span class="k">dont journées de récup</span><span class="v num">${st.impRec} j</span></div>
+    ${ended?"":`<div class="srow"><span class="k">Prévision fin ${y}</span><span class="v num">${st.impProj} j</span></div>`}
+    <details class="lg-d" style="margin:8px 0 0"><summary>Détail par mois</summary>
+      <table class="acct" style="margin-top:6px"><thead><tr><th>Mois</th><th>Travaillés</th><th>dont récup</th></tr></thead><tbody>
+      ${st.mon.map((m,i)=>`<tr><td style="text-transform:capitalize">${MOIS[i]}</td><td class="num">${m.imp}${m.impProj>m.imp?` <span class="hint" style="display:inline;margin:0">/ ${m.impProj}</span>`:""}</td><td class="num">${m.impRec||"·"}</td></tr>`).join("")}
+      </tbody></table></details>
+    <div class="hint">Compte les jours travaillés et les jours de récup (journée entière ou heures prises), sans les congés, fériés, ponts ni week-ends.${ended?"":" « / » : prévision du mois avec les jours à travailler."}</div></div>`;
   const P2 = periods(y);
   const ab = `<div class="panel"><h3>Mes absences ${y}</h3>${P2.length ? P2.map(absRow).join("") : `<div class="hint">Aucun congé, récup ou pont pour l'instant. Touche « Poser des jours » pour en ajouter.</div>`}</div>`;
   $("yearBody").innerHTML = `${kpisHTML(st)}<div class="minis">${Array.from({length:12},(_,m)=>miniHTML(y,m)).join("")}</div>${legendHTML()}
-    <div class="ylay"><div>${cp}${ds}</div><div>${rc}</div><div>${ab}</div></div>`;
+    <div class="ylay"><div>${cp}${ds}</div><div>${tx}${rc}</div><div>${ab}</div></div>`;
 }
 
 /* ---------- onglet Récup ---------- */
@@ -1776,6 +1789,7 @@ function openGuide(){
     ["Les calculs", `<p>Congés restants = reliquat N-1 + droits N − posés − prévus. Récup restante = report au 1<sup>er</sup> janvier + heures en plus − récup prise, convertie en jours (÷ ${fmtN(hday(),NF2)}), semaines (÷ 5) et mois (÷ 4), comme dans l'Excel.</p>`],
     ["Nouvelle année", `<p>Réglages → <b>Mes droits</b> → « Préparer ${new Date().getFullYear()+1} » : l'app propose de reprendre le restant de l'année en cours.</p>`],
     ["Ponts", `<p>Réglages → <b>Ponts</b> : ajoute les ponts accordés chaque année (l'app propose ceux qui collent à un férié du mardi ou du jeudi). Ils s'appliquent tout seuls dans le calendrier, comme les fériés.</p>`],
+    ["Impôts", `<p>Onglet <b>Année</b> → « Pour les impôts » : le nombre de jours travaillés de l'année, où les <b>jours de récup comptent comme travaillés</b> (journée R, ou journée travaillée avec des heures de récup prises). Les congés, fériés, ponts et week-ends n'y sont pas. Détail mois par mois disponible.</p>`],
     ["Historique", `<p>Chaque modification est notée dans l'onglet <b>Historique</b> : date, heure, appareil (iPhone ou ordinateur) et ce qui a changé (avant → après). Le bouton <b>Annuler</b> remet l'état d'avant ; l'annulation est elle-même notée.</p>`],
     ["Changer de mois", `<p>Flèches ‹ › ou glisse le doigt à gauche / à droite. Touche le titre pour revenir à aujourd'hui.</p>`],
   ];
