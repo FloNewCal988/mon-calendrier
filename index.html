@@ -923,6 +923,9 @@ table.acct tr[data-month]{cursor:pointer}
 .kpi-m b.pos{color:var(--pos)} .kpi-m b.neg{color:var(--neg)}
 .dc .c.tot{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
 .dc .c.tot.x{color:var(--ink)}
+.hm{display:block;font-size:.8em;font-weight:500;color:var(--muted);text-align:right;line-height:1.2}
+.srow .v .hm{margin-top:1px}
+.kpi-m .hm{display:inline;margin-left:6px;font-size:.92em}
 </style>
 </head>
 <body>
@@ -1384,6 +1387,8 @@ const minus = s => s.replace(/^-/,"−").replace(/ | /g," ");
 const fmtN = (n, nf) => minus((nf||NF1).format(Math.abs(n)<0.005?0:n));
 const fmtH = (n, sign) => (sign && n>0.004 ? "+" : "")+fmtN(n, NF2)+" h";
 const fmtJ = n => fmtN(n)+" j";
+/* 212,55 h → « 212,55 h · 212h33 » (heures décimales + heures et minutes) */
+const fmtHX = (n, sign) => Math.round(Math.abs(n)*60)%60 ? `${fmtH(n, sign)}<span class="hm">soit ${fmtHM(n, sign)}</span>` : fmtH(n, sign);
 /* 7,8 → 7h48 */
 function fmtHM(n, sign){ const neg=n<0, t=Math.round(Math.abs(n)*60), h=Math.floor(t/60), m=t%60;
   return (neg?"−":(sign&&t?"+":""))+h+"h"+(m?pad(m):""); }
@@ -1547,11 +1552,11 @@ function renderMonth(){
       ${ms.cnt.E?`<div class="hint">+ ${ms.cnt.E} congé${ms.cnt.E>1?"s":""} exceptionnel${ms.cnt.E>1?"s":""}, non décompté${ms.cnt.E>1?"s":""}.</div>`:""}
     </div>`;
   const recPanel = `<div class="panel"><h3>Récup de ${mname}</h3>
-      <div class="srow"><span class="k">Solde au 1er ${mname}</span><span class="v num">${fmtH(ms.start)}</span></div>
-      <div class="srow"><span class="k">Heures en plus</span><span class="v num p">${fmtH(ms.plus,true)}</span></div>
-      <div class="srow"><span class="k">Récup prise</span><span class="v num m">${fmtH(ms.minus)}</span></div>
-      <div class="srow"><span class="k"><b>Bilan du mois</b> <span class="hint" style="display:inline;margin:0">(en plus − prise)</span></span><span class="v num ${ms.net>0?"p":ms.net<0?"m":""}"><b>${fmtH(ms.net,true)}</b></span></div>
-      <div class="srow total"><span class="k">Solde fin ${mname}</span><span class="v num">${fmtH(ms.end)}</span></div>
+      <div class="srow"><span class="k">Solde au 1er ${mname}</span><span class="v num">${fmtHX(ms.start)}</span></div>
+      <div class="srow"><span class="k">Heures en plus</span><span class="v num p">${fmtHX(ms.plus,true)}</span></div>
+      <div class="srow"><span class="k">Récup prise</span><span class="v num m">${fmtHX(ms.minus)}</span></div>
+      <div class="srow"><span class="k"><b>Bilan du mois</b> <span class="hint" style="display:inline;margin:0">(en plus − prise)</span></span><span class="v num ${ms.net>0?"p":ms.net<0?"m":""}"><b>${fmtHX(ms.net,true)}</b></span></div>
+      <div class="srow total"><span class="k">Solde fin ${mname}</span><span class="v num">${fmtHX(ms.end)}</span></div>
       <div class="more"><button class="btn ghost small" data-addhours="${isCur?todayIso():ui.month+"-01"}">Saisir des heures</button></div>
     </div>`;
   const cntPanel = `<div class="panel"><h3>Jours de ${mname}</h3>${countsHTML(ms.cnt, true)}</div>`;
@@ -1579,11 +1584,11 @@ function renderYear(){
     <div class="srow total"><span class="k">Restant</span><span class="v num${st.cpRest<0?" neg":""}">${fmtJ(st.cpRest)}</span></div>
     <div class="more"><button class="btn ghost small" data-yearedit="${y}">Modifier les droits ${y}</button></div></div>`;
   const rc = `<div class="panel"><h3>Récupération</h3>
-    <div class="srow"><span class="k">Report au 1er janvier</span><span class="v num">${fmtH(P.recup)} <span class="hint" style="display:inline;margin:0">· ${fmtJ(P.recup/hd)}</span></span></div>
-    <div class="srow"><span class="k">Heures en plus</span><span class="v num p">${fmtH(st.plus,true)}</span></div>
-    <div class="srow"><span class="k">Récup prise</span><span class="v num m">${fmtH(st.minus)}</span></div>
-    <div class="srow"><span class="k"><b>Bilan de l'année</b></span><span class="v num ${st.net>0?"p":st.net<0?"m":""}"><b>${fmtH(st.net,true)}</b></span></div>
-    <div class="srow total"><span class="k">Restante</span><span class="v num${st.recRest<0?" neg":""}">${fmtH(st.recRest)}</span></div>
+    <div class="srow"><span class="k">Report au 1er janvier</span><span class="v num">${fmtHX(P.recup)} <span class="hint" style="display:inline;margin:0">· ${fmtJ(P.recup/hd)}</span></span></div>
+    <div class="srow"><span class="k">Heures en plus</span><span class="v num p">${fmtHX(st.plus,true)}</span></div>
+    <div class="srow"><span class="k">Récup prise</span><span class="v num m">${fmtHX(st.minus)}</span></div>
+    <div class="srow"><span class="k"><b>Bilan de l'année</b></span><span class="v num ${st.net>0?"p":st.net<0?"m":""}"><b>${fmtHX(st.net,true)}</b></span></div>
+    <div class="srow total"><span class="k">Restante</span><span class="v num${st.recRest<0?" neg":""}">${fmtHX(st.recRest)}</span></div>
     <div class="srow"><span class="k">soit</span><span class="v num">${fmtJ(st.recDays)} · ${fmtN(st.recWeeks)} sem. · ${fmtN(st.recMonths)} mois</span></div>
     <div class="more"><button class="btn ghost small" data-gotab="recup">Détail mois par mois</button></div></div>`;
   const ds = `<div class="panel"><h3>Jours de l'année</h3>${countsHTML(st.cnt, true)}</div>`;
